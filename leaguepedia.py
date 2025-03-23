@@ -3,25 +3,6 @@ from datetime import datetime, timedelta, timezone
 import json
 import urllib.request
 
-"""
-site = EsportsClient("lol")
-    response = site.cargo_client.query(
-        tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
-        join_on="MS.OverviewPage=T.OverviewPage, Teams1.LongName=MS.Team1, Teams2.LongName=MS.Team2",
-        fields="MS.DateTime_UTC=Date, T.Name, MS.Team1, MS.Team2, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, MS.Tab",
-        where=f"MS.DateTime_UTC > '2025-02-04' AND MS.DateTime_UTC <= '2025-02-06'",
-        order_by="DateTime_UTC"
-    )
-
-    # Convert the OrderedDict to a JSON-formatted string
-    json_data = json.dumps(response, indent=2)
-    json_data = json.loads(json_data)
-    competitions = set()
-    for match in json_data:
-        print(match)
-"""
-
-
 def get_competitions():
     now = datetime.now(timezone.utc) #- timedelta(30) .strftime("%Y-%m-%d")
     site = EsportsClient("lol")

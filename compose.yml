@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+    ports:
+      - '8000:8000' # Map your backend application’s port to the host
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=azbecbaboevav
+      - MYSQL_DATABASE=pronosmodo
+      - MYSQL_USER=modo
+      - MYSQL_PASSWORD=
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
