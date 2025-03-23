@@ -1,9 +1,8 @@
-import hashlib
-
 import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
@@ -12,6 +11,14 @@ from bets import *
 from leaguepedia import *
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 scheduler = BackgroundScheduler()
 
 
