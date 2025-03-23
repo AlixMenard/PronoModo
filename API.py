@@ -236,3 +236,9 @@ async def ranking(competition:int):
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
+
+@app.get("/logo")
+async def logo(team:str):
+    with open("logos.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return {'url' : data.get(team)}

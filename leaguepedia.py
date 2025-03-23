@@ -59,10 +59,11 @@ def get_schedule(competition:str):
         data = json.load(f)
     for r in json_data:
         t1, t2 = r["Team1Final"], r["Team2Final"]
-        if not t1 in data:
-            data[t1] = get_team_logo_url(t1)
-        if not t2 in data:
-            data[t2] = get_team_logo_url(t2)
+        t1s, t2s = r["Short1"], r["Short2"]
+        if not t1s in data:
+            data[t1s] = get_team_logo_url(t1)
+        if not t2s in data:
+            data[t2s] = get_team_logo_url(t2)
 
     with open("logos.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
