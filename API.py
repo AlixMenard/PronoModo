@@ -57,8 +57,8 @@ def update_matches():
     mydb.commit()
 
     date = datetime.now(timezone.utc)
-    sql = "SELECT name FROM tournaments WHERE start < %s AND end > %s;"
-    mycursor.execute(sql, (date, date-timedelta(days=1)))
+    sql = "SELECT name FROM tournaments WHERE end > %s;"
+    mycursor.execute(sql, (date-timedelta(days=1),))
     saved_competitions = [n[0] for n in mycursor.fetchall()]
     for competition in competitions:
         if competition["Name"] not in saved_competitions:
