@@ -6,13 +6,13 @@ import urllib.request
 def get_competitions():
     now = datetime.now(timezone.utc) #- timedelta(30) .strftime("%Y-%m-%d")
     site = EsportsClient("lol")
-    leagues = ["First Stand", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"] #off LCK CL
+    leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"] #off LCK CL
     league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")" #(T.Name LIKE '%LEC%' OR T.Name LIKE '%LCK%' OR T.Name LIKE '%LFL%' OR T.Name LIKE '%LPL%')
     response = site.cargo_client.query(
         tables = "MatchSchedule=MS, Tournaments=T",
         join_on="MS.OverviewPage=T.OverviewPage",
         fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.Date >= '{now-timedelta(1)}' AND T.DateStart <= '{now}' AND {league_filter}", #
+        where=f"T.Date >= '{now-timedelta(1)}' AND {league_filter}", #
         group_by="T.Name"
     )
     json_data = json.dumps(response, indent=2)
@@ -26,8 +26,8 @@ def get_schedule(competition:str):
     response = site.cargo_client.query(
         tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
-        fields="MS.DateTime_UTC=Date, MS.Team1, MS.Team2, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score",
-        where=f"T.Date >= '{now}' AND T.DateStart <= '{now + timedelta(7)}' AND T.Name = '{competition}' AND MS.Team1 != 'TBD' AND MS.Team2 != 'TBD'",
+        fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score",
+        where=f"T.Name = '{competition}'",
         group_by="Teams1.Short, Teams2.Short"
     )
     json_data = json.dumps(response, indent=2)
@@ -35,12 +35,25 @@ def get_schedule(competition:str):
     now = datetime.now(timezone.utc)
     for r in json_data:
         r["Status"] = "Done" if r["Winner"] is not None else "Ongoing" if datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)<now else "Waiting"
+ 
+     with open("logos.json", "r", encoding="utf-8") as f:
+         data = json.load(f)
+     for r in json_data:
+         t1, t2 = r["Team1Final"], r["Team2Final"]
+         if not t1 in data:
+             data[t1] = get_team_logo_url(t1)
+         if not t2 in data:
+             data[t2] = get_team_logo_url(t2)
+ 
+     with open("logos.json", "w", encoding="utf-8") as f:
+         json.dump(data, f, indent=2)
+ 
     return json_data
 
 
-def get_filename_url_to_open(team, width=None):
-    filename = f"{team}logo square.png"
+def get_team_logo_url(team: str, width=None):
     site = EsportsClient("lol")
+    filename = f"{team}logo square.png"
     response = site.client.api(
         action="query",
         format="json",
@@ -50,12 +63,9 @@ def get_filename_url_to_open(team, width=None):
         iiurlwidth=width,
     )
 
-    image_info = next(iter(response["query"]["pages"].values()))["imageinfo"][0]
+    image_info = next(iter(response["query"]["pages"].values())).get("imageinfo", [{}])[0]
 
-    if width:
-        url = image_info["thumburl"]
-    else:
-        url = image_info["url"]
+    if not image_info:
+        return None  # Return None if no image info is found
 
-    #In case you would like to save the image in a specific location, you can add the path after 'url,' in the line below.
-    urllib.request.urlretrieve(url, "logos\\" + team + '.png')
+    return image_info["thumburl"] if width else image_info["url"]
