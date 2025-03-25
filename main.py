@@ -72,8 +72,8 @@ def update_matches():
     mydb.commit()
 
     date = datetime.now(timezone.utc)
-    sql = "SELECT name FROM tournaments WHERE start < %s AND end > %s;"
-    mycursor.execute(sql, (date, date - timedelta(days=1)))
+    sql = "SELECT name FROM tournaments WHERE end > %s;"
+    mycursor.execute(sql, (date-timedelta(days=1),))
     saved_competitions = [n[0] for n in mycursor.fetchall()]
     for competition in competitions:
         if competition["Name"] not in saved_competitions:
@@ -237,3 +237,9 @@ async def ranking(competition: int):
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
+
+@app.get("/logo")
+ async def logo(team:str):
+     with open("logos.json", "r", encoding="utf-8") as f:
+         data = json.load(f)
+     return {'url' : data.get(team)}
