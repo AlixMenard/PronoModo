@@ -36,18 +36,18 @@ def get_schedule(competition:str):
     for r in json_data:
         r["Status"] = "Done" if r["Winner"] is not None else "Ongoing" if datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)<now else "Waiting"
  
-     with open("logos.json", "r", encoding="utf-8") as f:
-         data = json.load(f)
-     for r in json_data:
-         t1, t2 = r["Team1Final"], r["Team2Final"]
-         t1s, t2s = r["Short1"], r["Short2"]
-         if not t1s in data:
-             data[t1s] = get_team_logo_url(t1)
-         if not t2s in data:
-             data[t2s] = get_team_logo_url(t2)
- 
-     with open("logos.json", "w", encoding="utf-8") as f:
-         json.dump(data, f, indent=2)
+    with open("logos.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    for r in json_data:
+        t1, t2 = r["Team1Final"], r["Team2Final"]
+        t1s, t2s = r["Short1"], r["Short2"]
+        if not t1s in data:
+            data[t1s] = get_team_logo_url(t1)
+        if not t2s in data:
+            data[t2s] = get_team_logo_url(t2)
+     
+    with open("logos.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
  
     return json_data
 
