@@ -21,6 +21,31 @@ site = EsportsClient("lol")
         print(match)
 """
 
+def catch_names(name):
+    match name:
+        case "Nigma Galaxy Male":
+            return "NGX"
+        case "Ninjas in Pyjamas.CN":
+            return "NIP"
+        case "SAW (Portuguese Team)":
+            return "SAW"
+        case "Excel Esports":
+            return "GX"
+        case "Rogue (European Team)":
+            return "RGE"
+        case "Aegis (French Team)":
+            return "AEG"
+        case "GIANTX Academy":
+            return "GXP"
+        case "FC Schalke 04 Esports":
+            return "S04"
+        case "Nameless (French Team)":
+            return "NMS"
+        case "Vikings Esports (2023 Vietnamese Team)":
+            return "VKE"
+        case _:
+            print("Nom inconnu : ", name)
+            return "une équipe"
 
 def get_competitions():
     now = datetime.now(timezone.utc) #- timedelta(30) .strftime("%Y-%m-%d")
@@ -54,6 +79,11 @@ def get_schedule(competition:str):
     now = datetime.now(timezone.utc)
     for r in json_data:
         r["Status"] = "Done" if r["Winner"] is not None else "Ongoing" if datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)<now else "Waiting"
+        if r["Short1"] == None:
+            r["Short1"] = catch_names(r["Team1Final"])
+        if r["Short2"] == None:
+            r["Short2"] = catch_names(r["Team2Final"])
+
 
     with open("logos.json", "r", encoding="utf-8") as f:
         data = json.load(f)

@@ -35,6 +35,7 @@ def update_matches():
             score1 = match["Team1Score"]
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
             score2 = match["Team2Score"]
+            bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
             if (team1, team2, date) in saved_matches:
@@ -43,17 +44,17 @@ def update_matches():
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s
                             WHERE team1 = %s AND team2 = %s AND date = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, team1, team2, date))
+                mycursor.execute(sql, (score1, score2, status, team1, team2, date, bo))
             else:
                 # Match does not exist, insert it
                 sql = """
-                                    INSERT INTO matches (tournament, team1, team2, score1, score2, date, status) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1 if score1 is not None else 0, score2 if score2 is not None else 0, date, status))
+                mycursor.execute(sql, (tournament, team1, team2, score1 if score1 is not None else 0, score2 if score2 is not None else 0, bo, date, status))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
