@@ -1,11 +1,12 @@
 import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
+from pydantic import BaseModel
 
 from bets import *
 from leaguepedia import *
@@ -20,7 +21,6 @@ app.add_middleware(
 )
 
 scheduler = BackgroundScheduler()
-
 
 def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
     return mysql.connector.connect(
@@ -50,6 +50,7 @@ def update_matches():
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
             score2 = match["Team2Score"]
             score2 = score2 if score2 is not None else 0
+            bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
             if (team1, team2, date) in saved_matches:
@@ -58,17 +59,17 @@ def update_matches():
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s
                             WHERE team1 = %s AND team2 = %s AND date = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, team1, team2, date))
+                mycursor.execute(sql, (score1, score2, status, bo, team1, team2, date))
             else:
                 # Match does not exist, insert it
                 sql = """
-                                    INSERT INTO matches (tournament, team1, team2, score1, score2, date, status) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1, score2, date, status))
+                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
@@ -140,9 +141,9 @@ scheduler.add_job(update_matches, 'interval', minutes=1)
 scheduler.start()
 
 
-@app.get("/")
-async def root():
-    return {"connection": "OK"}
+@app.get("/health")
+async def health():
+    return {"status": "HEALTHY"}
 
 
 @app.post("/bet")
@@ -195,7 +196,7 @@ async def matches(competition: int):
     date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.date, m.status FROM matches AS m 
+    sql = """SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.bo, m.date, m.status FROM matches AS m 
              JOIN tournaments AS t ON m.tournament=t.name 
              WHERE m.date >= %s AND t.id = %s"""
     mycursor.execute(sql, (date, competition))
@@ -238,8 +239,12 @@ async def ranking(competition: int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+class LogoResponse(BaseModel):
+    url: str
+
 @app.get("/logo")
-async def logo(team:str):
-    with open("logos.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return {'url' : data.get(team)}
+async def logo(team: str):
+    url = get_team_logo_url(team.upper())
+    if url is None:
+        raise HTTPException(status_code=404, detail="Team logo not found")
+    return LogoResponse(url=url)
