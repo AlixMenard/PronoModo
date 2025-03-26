@@ -23,6 +23,7 @@ CREATE TABLE `matches`
     `team2`      varchar(10)  NOT NULL,
     `score1`     int(11)      NOT NULL,
     `score2`     int(11)      NOT NULL,
+    `bo`         int(11)      NOT NULL,
     `date`       datetime     NOT NULL,
     `status`     varchar(10)  NOT NULL
 ) ENGINE = InnoDB
