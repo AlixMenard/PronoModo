@@ -267,3 +267,25 @@ async def logo(team: str):
     if url is None:
         raise HTTPException(status_code=404, detail="Team logo not found")
     return LogoResponse(url=url)
+
+#? admin routes
+@app.get("/admin/users")
+async def users():
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+
+    sql = "SELECT id, name FROM modos"
+    mycursor.execute(sql)
+    results = mycursor.fetchall()
+    mydb.close()
+    return results
+
+@app.delete("/admin/user")
+async def del_user(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "DELETE FROM modos WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    mydb.commit()
+    mydb.close()
+    return {"status": "success", "message": f"User {id} deleted"}
