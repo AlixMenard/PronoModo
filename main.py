@@ -150,12 +150,31 @@ async def health():
 async def bet(modo: int, gameid: int, score1: int, score2: int):
     mydb = get_session()
     mycursor = mydb.cursor()
-    mycursor.execute(
-        "INSERT INTO bets (modo, matchid, team1bet, team2bet, date) VALUES (%s, %s, %s, %s, %s)",
-        (modo, gameid, score1, score2, datetime.now(timezone.utc)),
-    )
+
+    mycursor.execute("SELECT * from bets WHERE modo = %s AND matchid = %s", (modo, gameid))
+    bets = mycursor.fetchall()
+    now = datetime.now(timezone.utc)
+
+    if bets:
+        sql = """
+                UPDATE bets 
+                SET team1bet = %s, team2bet = %s, date = %s
+                WHERE modo = %s AND matchid = %s
+                """
+        params = (score1, score2, now, modo, gameid)
+        action = "Bet modified"
+    else:
+        sql = """
+                INSERT INTO bets (modo, matchid, team1bet, team2bet, date)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+        params = (modo, gameid, score1, score2, now)
+        action = "Bet added"
+
+    mycursor.execute(sql, params)
     mydb.commit()
     mydb.close()
+    return {"status" : "Success", "action" : action}
 
 
 @app.post("/signin")
