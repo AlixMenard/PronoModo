@@ -289,3 +289,13 @@ async def del_user(id : int):
     mydb.commit()
     mydb.close()
     return {"status": "success", "message": f"User {id} deleted"}
+
+@app.delete("/admin/cancel")
+async def cancel(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "DELETE FROM bets WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    mydb.commit()
+    mydb.close()
+    return {"status": "success", "message": f"Bet {id} cancelled"}
