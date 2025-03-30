@@ -154,6 +154,12 @@ async def bet(modo: int, gameid: int, score1: int, score2: int):
     mycursor.execute("SELECT * from bets WHERE modo = %s AND matchid = %s", (modo, gameid))
     bets = mycursor.fetchall()
     now = datetime.now(timezone.utc)
+    mycursor.execute("SELECT bo FROM matches WHERE id = %s", (gameid,))
+    bo = mycursor.fetchone()[0]
+
+    m = max(score1, score2)
+    if m*2 -1 != bo or score1+score2 > m:
+        return {"status": "Fail", "message": "Incorrect bet"}
 
     if bets:
         sql = """
