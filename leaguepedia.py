@@ -42,6 +42,7 @@ def get_competitions():
 
     # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
     data = [comp for comp in response if "LCK CL" not in comp["Name"]]
+    data = [comp for comp in response if "LCK AS" not in comp["Name"]]
     return data
 
 def get_schedule(competition: str):
@@ -58,6 +59,8 @@ def get_schedule(competition: str):
     now = datetime.now(timezone.utc)
 
     for r in competition_data:
+        if r["Date"] is None:
+            continue
         if r["Winner"] is None:
             scheduled_datetime = datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             r["Status"] = "Ongoing" if scheduled_datetime < now else "Waiting"
