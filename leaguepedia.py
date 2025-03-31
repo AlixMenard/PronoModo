@@ -60,7 +60,7 @@ def get_schedule(competition: str):
 
     for r in competition_data:
         if r["Date"] is None:
-            continue
+            r["Status"] = "Waiting"
         if r["Winner"] is None:
             scheduled_datetime = datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             r["Status"] = "Ongoing" if scheduled_datetime < now else "Waiting"
