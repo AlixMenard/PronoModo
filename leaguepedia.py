@@ -1,121 +1,119 @@
-from mwrogue.esports_client import EsportsClient
-from datetime import datetime, timedelta, timezone
+import functools
 import json
-import urllib.request
+import logging
+from datetime import datetime, timedelta, timezone
 
-"""
-site = EsportsClient("lol")
-    response = site.cargo_client.query(
-        tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
-        join_on="MS.OverviewPage=T.OverviewPage, Teams1.LongName=MS.Team1, Teams2.LongName=MS.Team2",
-        fields="MS.DateTime_UTC=Date, T.Name, MS.Team1, MS.Team2, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, MS.Tab",
-        where=f"MS.DateTime_UTC > '2025-02-04' AND MS.DateTime_UTC <= '2025-02-06'",
-        order_by="DateTime_UTC"
-    )
+from mwrogue.esports_client import EsportsClient
 
-    # Convert the OrderedDict to a JSON-formatted string
-    json_data = json.dumps(response, indent=2)
-    json_data = json.loads(json_data)
-    competitions = set()
-    for match in json_data:
-        print(match)
-"""
+_KNOWN_NAMES = {
+    "Nigma Galaxy Male": "NGX",
+    "Ninjas in Pyjamas.CN": "NIP",
+    "SAW (Portuguese Team)": "SAW",
+    "Excel Esports": "GX",
+    "Rogue (European Team)": "RGE",
+    "Aegis (French Team)": "AEG",
+    "GIANTX Academy": "GXP",
+    "FC Schalke 04 Esports": "S04",
+    "Nameless (French Team)": "NMS",
+    "Vikings Esports (2023 Vietnamese Team)": "VKE",
+}
 
-def catch_names(name):
-    match name:
-        case "Nigma Galaxy Male":
-            return "NGX"
-        case "Ninjas in Pyjamas.CN":
-            return "NIP"
-        case "SAW (Portuguese Team)":
-            return "SAW"
-        case "Excel Esports":
-            return "GX"
-        case "Rogue (European Team)":
-            return "RGE"
-        case "Aegis (French Team)":
-            return "AEG"
-        case "GIANTX Academy":
-            return "GXP"
-        case "FC Schalke 04 Esports":
-            return "S04"
-        case "Nameless (French Team)":
-            return "NMS"
-        case "Vikings Esports (2023 Vietnamese Team)":
-            return "VKE"
-        case _:
-            print("Nom inconnu : ", name)
-            return "une équipe"
+def _catch_names(name):
+    alias = _KNOWN_NAMES.get(name)
+    if alias is None:
+        logging.warning(f"Unknown team name: {name}")
+        return "une équipe"
+    return alias
 
 def get_competitions():
-    now = datetime.now(timezone.utc) #- timedelta(30) .strftime("%Y-%m-%d")
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+
+    leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"]
+    league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")"
+
     site = EsportsClient("lol")
-    leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"] #off LCK CL
-    league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")" #(T.Name LIKE '%LEC%' OR T.Name LIKE '%LCK%' OR T.Name LIKE '%LFL%' OR T.Name LIKE '%LPL%')
     response = site.cargo_client.query(
         tables = "MatchSchedule=MS, Tournaments=T",
         join_on="MS.OverviewPage=T.OverviewPage",
         fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.Date >= '{now-timedelta(1)}' AND {league_filter}", #
+        where=f"T.Date >= '{yesterday}' AND {league_filter}",
         group_by="T.Name"
     )
-    json_data = json.dumps(response, indent=2)
-    json_data = json.loads(json_data)
-    json_data = [comp for comp in json_data if "LCK CL" not in comp["Name"]]
-    return json_data
 
-def get_schedule(competition:str):
-    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
+    data = [comp for comp in response if "LCK CL" not in comp["Name"]]
+    return data
+
+def get_schedule(competition: str):
     site = EsportsClient("lol")
-    response = site.cargo_client.query(
+    competition_data = site.cargo_client.query(
         tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
         fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score",
         where=f"T.Name = '{competition}'",
         group_by="Teams1.Short, Teams2.Short"
     )
-    json_data = json.dumps(response, indent=2)
-    json_data = json.loads(json_data)
+
     now = datetime.now(timezone.utc)
-    for r in json_data:
-        r["Status"] = "Done" if r["Winner"] is not None else "Ongoing" if datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)<now else "Waiting"
-        if r["Short1"] == None:
-            r["Short1"] = catch_names(r["Team1Final"])
-        if r["Short2"] == None:
-            r["Short2"] = catch_names(r["Team2Final"])
 
+    for r in competition_data:
+        if r["Winner"] is None:
+            scheduled_datetime = datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            r["Status"] = "Ongoing" if scheduled_datetime < now else "Waiting"
+        else:
+            r["Status"] = "Done"
 
+        if r["Short1"] is None:
+            r["Short1"] = _catch_names(r["Team1Final"])
+        _update_team_logo_url_from_api(r["Team1Final"], r["Short1"])
+
+        if r["Short2"] is None:
+            r["Short2"] = _catch_names(r["Team2Final"])
+        _update_team_logo_url_from_api(r["Team2Final"], r["Short2"])
+
+    return competition_data
+
+@functools.lru_cache(maxsize=256)
+def get_team_logo_url(shortcode: str) -> str:
+    return _get_team_logo_urls().get(shortcode)
+
+@functools.lru_cache(maxsize=1)
+def _get_team_logo_urls() -> dict[str, str]:
     with open("logos.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    for r in json_data:
-        t1, t2 = r["Team1Final"], r["Team2Final"]
-        t1s, t2s = r["Short1"], r["Short2"]
-        if not t1s in data:
-            data[t1s] = get_team_logo_url(t1)
-        if not t2s in data:
-            data[t2s] = get_team_logo_url(t2)
+        return json.load(f)
 
-    with open("logos.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
+    # If refresh is not explicitly requested and the logo already exists, do nothing.
+    if not refresh and get_team_logo_url(shortcode) is not None:
+        return
 
-    return json_data
-
-
-def get_team_logo_url(team: str, width=None):
     site = EsportsClient("lol")
-    filename = f"{team}logo square.png"
     response = site.client.api(
         action="query",
         format="json",
-        titles=f"File:{filename}",
+        titles=f"File:{team}logo square.png",
         prop="imageinfo",
         iiprop="url",
-        iiurlwidth=width,
+        iiurlwidth=None,
     )
 
+    # Black magic, see [docs example](https://lol.fandom.com/wiki/Help:Leaguepedia_API#Example_5.2:_Save_Team_image)
     image_info = next(iter(response["query"]["pages"].values())).get("imageinfo", [{}])[0]
+    url = image_info.get('url')
 
-    if not image_info:
-        return None  # Return None if no image info is found
+    if url is None:
+        logging.warning(f"No logo found for team {team}")
+        return
+    _upsert_team_logo(shortcode, url)
 
-    return image_info["thumburl"] if width else image_info["url"]
+def _upsert_team_logo(shortcode: str, url: str):
+    # To ensure correctness we reset the cache of the following functions.
+    _get_team_logo_urls.cache_clear()
+    get_team_logo_url.cache_clear()
+
+    with open("logos.json", "r+", encoding="utf-8") as f:
+        data = json.load(f)
+        data[shortcode] = url
+        f.seek(0)
+        json.dump(data, f, indent=4)
+        f.truncate()

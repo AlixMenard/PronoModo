@@ -1,31 +1,44 @@
-import hashlib
-
-from fastapi import FastAPI
-
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
 import mysql.connector
-from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from mysql.connector.abstracts import MySQLConnectionAbstract
+from mysql.connector.pooling import PooledMySQLConnection
+from pydantic import BaseModel
 
+from bets import *
 from leaguepedia import *
-from Bets import *
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 scheduler = BackgroundScheduler()
+
+def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
+    return mysql.connector.connect(
+        host="db",
+        port=3306,
+        user="root",
+        password="azbecbaboevav",
+        database="pronosmodo"
+    )
 
 
 def update_matches():
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+    mydb = get_session()
     mycursor = mydb.cursor()
 
     mycursor.execute("SELECT team1, team2, date, status FROM matches")
-    saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")):status for team1, team2, date, status in mycursor.fetchall()} #2025-03-17 16:00:00
+    saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")): status for team1, team2, date, status in
+                     mycursor.fetchall()}  # 2025-03-17 16:00:00
     competitions = get_competitions()
     for competition in competitions:
         schedule = get_schedule(competition["Name"])
@@ -33,8 +46,10 @@ def update_matches():
             tournament = match['Name']
             team1 = match["Short1"] if match["Short1"] is not None else "TBD"
             score1 = match["Team1Score"]
+            score1 = score1 if score1 is not None else 0
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
             score2 = match["Team2Score"]
+            score2 = score2 if score2 is not None else 0
             bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
@@ -47,14 +62,14 @@ def update_matches():
                             SET score1 = %s, score2 = %s, status = %s, bo = %s
                             WHERE team1 = %s AND team2 = %s AND date = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, team1, team2, date, bo))
+                mycursor.execute(sql, (score1, score2, status, bo, team1, team2, date))
             else:
                 # Match does not exist, insert it
                 sql = """
                                     INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status) 
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1 if score1 is not None else 0, score2 if score2 is not None else 0, bo, date, status))
+                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
@@ -68,7 +83,6 @@ def update_matches():
         else:
             continue
     mydb.commit()
-
 
     mycursor.execute("SELECT id, team1, team2, tournament, score1, score2 FROM matches WHERE status = 'Done'")
     matches = mycursor.fetchall()
@@ -88,7 +102,7 @@ def update_matches():
     modos = dict()
     for r_ in results:
         for b_ in bets:
-            if r_!=b_:
+            if r_ != b_:
                 continue
             r = results[r_]
             for b in bets[b_]:
@@ -98,7 +112,8 @@ def update_matches():
                     modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo)
                 else:
                     s = b[1] + r[1]
-                    modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1]+1,  modos[b[0]][r[0]][2] + 1 if s==b[1].bo else modos[b[0]][r[0]][2])
+                    modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1] + 1,
+                                         modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2])
     mycursor.execute(f"SELECT modo, tournament FROM scores")
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
@@ -115,58 +130,81 @@ def update_matches():
                         INSERT INTO scores (modo, tournament, num_bets, score, perfect) 
                         VALUES (%s, %s, %s, %s, %s)
                 """
-                mycursor.execute(sql, (m, t, modos[m][t][1],modos[m][t][0], modos[m][t][2]))
+                mycursor.execute(sql, (m, t, modos[m][t][1], modos[m][t][0], modos[m][t][2]))
     mydb.commit()
 
     mydb.close()
+
 
 update_matches()
 scheduler.add_job(update_matches, 'interval', minutes=1)
 scheduler.start()
 
-@app.get("/")
-async def root():
-    return {"connection":"OK"}
+
+@app.get("/health")
+async def health():
+    return {"status": "HEALTHY"}
+
 
 @app.post("/bet")
-async def bet(modo:int, gameid:int, score1:int, score2:int):
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+async def bet(modo: int, gameid: int, score1: int, score2: int):
+    mydb = get_session()
     mycursor = mydb.cursor()
-    mycursor.execute(
-        "INSERT INTO bets (modo, matchid, team1bet, team2bet, date) VALUES (%s, %s, %s, %s, %s)",
-        (modo, gameid, score1, score2, datetime.now(timezone.utc)),
-    )
+
+    mycursor.execute("SELECT * from bets WHERE modo = %s AND matchid = %s", (modo, gameid))
+    bets = mycursor.fetchall()
+    now = datetime.now(timezone.utc)
+    mycursor.execute("SELECT bo FROM matches WHERE id = %s", (gameid,))
+    bo = mycursor.fetchone()[0]
+
+    m = max(score1, score2)
+    if m*2 -1 != bo or score1+score2 > m:
+        return {"status": "Fail", "message": "Incorrect bet"}
+
+    if bets:
+        sql = """
+                UPDATE bets 
+                SET team1bet = %s, team2bet = %s, date = %s
+                WHERE modo = %s AND matchid = %s
+                """
+        params = (score1, score2, now, modo, gameid)
+        action = "Bet modified"
+    else:
+        sql = """
+                INSERT INTO bets (modo, matchid, team1bet, team2bet, date)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+        params = (modo, gameid, score1, score2, now)
+        action = "Bet added"
+
+    mycursor.execute(sql, params)
     mydb.commit()
     mydb.close()
+    return {"status" : "Success", "action" : action}
+
 
 @app.post("/signin")
-async def signin(modo:str):
-    id = hashlib.sha256(modo.encode()).hexdigest()
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+async def signin(modo: str):
+    mydb = get_session()
     mycursor = mydb.cursor()
-    mycursor.execute("INSERT INTO modos (id, name) VALUES (%s, %s)", (id, modo))
+
+    mycursor.execute("SELECT id, name FROM modos WHERE name = %s", (modo,))
+    modos = mycursor.fetchall()
+    if modos:
+        mydb.commit()
+        mydb.close()
+        return {'id': modos[0][0], 'name': modos[0][1]}
+
+    mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
+    modo_id = mycursor.lastrowid
     mydb.commit()
     mydb.close()
-    return JSONResponse({"id": id}, status_code=200)
+    return {'id': modo_id, 'name': modo}
+
 
 @app.get("/competitions")
 async def competitions():
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+    mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
     sql = "SELECT id, name, start, end FROM tournaments ORDER BY end DESC"
     mycursor.execute(sql)
@@ -177,17 +215,13 @@ async def competitions():
 
     return JSONResponse(content=jsonable_encoder(results))
 
+
 @app.get("/matches")
-async def matches(competition:int):
+async def matches(competition: int):
     date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+    mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.date, m.status FROM matches AS m 
+    sql = """SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.bo, m.date, m.status FROM matches AS m 
              JOIN tournaments AS t ON m.tournament=t.name 
              WHERE m.date >= %s AND t.id = %s"""
     mycursor.execute(sql, (date, competition))
@@ -197,14 +231,10 @@ async def matches(competition:int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+
 @app.get("/bets")
-async def bets(modo:int):
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+async def bets(modo: int):
+    mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
     sql = """SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
@@ -217,14 +247,10 @@ async def bets(modo:int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+
 @app.get("/ranking")
-async def ranking(competition:int):
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="modo",
-        password="",
-        database="pronosmodo"
-    )
+async def ranking(competition: int):
+    mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
     sql = """SELECT m.name, s.num_bets, s.score FROM scores AS s
              JOIN modos AS m ON m.id=s.modo
@@ -238,8 +264,44 @@ async def ranking(competition:int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+class LogoResponse(BaseModel):
+    url: str
+
 @app.get("/logo")
-async def logo(team:str):
-    with open("logos.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return {'url' : data.get(team)}
+async def logo(team: str):
+    url = get_team_logo_url(team.upper())
+    if url is None:
+        raise HTTPException(status_code=404, detail="Team logo not found")
+    return LogoResponse(url=url)
+
+#? admin routes
+@app.get("/admin/users")
+async def users():
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+
+    sql = "SELECT id, name FROM modos"
+    mycursor.execute(sql)
+    results = mycursor.fetchall()
+    mydb.close()
+    return results
+
+@app.delete("/admin/user")
+async def del_user(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "DELETE FROM modos WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    mydb.commit()
+    mydb.close()
+    return {"status": "success", "message": f"User {id} deleted"}
+
+@app.delete("/admin/cancel")
+async def cancel(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "DELETE FROM bets WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    mydb.commit()
+    mydb.close()
+    return {"status": "success", "message": f"Bet {id} cancelled"}

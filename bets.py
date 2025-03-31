@@ -19,14 +19,14 @@ class Bet:
 
     @property
     def bo(self):
-        return (max(self.score1, self.score2)*2-1)
+        return max(self.score1, self.score2)*2-1
 
     @property
     def id(self):
         return self.score1 - self.score2
 
     def __add__(self, result):
-        assert(self.bo == self.bo)
+        assert(self.bo == result.bo)
         match self.bo:
             case 1:
                 return int(self.score1 == result.score1)
@@ -60,7 +60,7 @@ class Result:
 
     @property
     def bo(self):
-        return (max(self.score1, self.score2)-1)*2
+        return max(self.score1, self.score2)*2-1
 
     @property
     def id(self):
