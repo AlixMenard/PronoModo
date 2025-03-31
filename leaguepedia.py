@@ -51,7 +51,8 @@ def get_schedule(competition: str):
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
         fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score",
         where=f"T.Name = '{competition}'",
-        group_by="Teams1.Short, Teams2.Short"
+        group_by="Teams1.Short, Teams2.Short, MS.DateTime_UTC",
+        order_by="MS.DateTime_UTC"
     )
 
     now = datetime.now(timezone.utc)
