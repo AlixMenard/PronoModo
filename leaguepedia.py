@@ -58,9 +58,12 @@ def get_schedule(competition: str):
 
     now = datetime.now(timezone.utc)
 
+    to_remove = []
+
     for r in competition_data:
         if r["Date"] is None:
-            r["Status"] = "Waiting"
+            to_remove.append(r)
+            continue
         if r["Winner"] is None:
             scheduled_datetime = datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             r["Status"] = "Ongoing" if scheduled_datetime < now else "Waiting"
@@ -74,6 +77,9 @@ def get_schedule(competition: str):
         if r["Short2"] is None:
             r["Short2"] = _catch_names(r["Team2Final"])
         _update_team_logo_url_from_api(r["Team2Final"], r["Short2"])
+
+    for r in to_remove:
+        competition_data.remove(r)
 
     return competition_data
 
