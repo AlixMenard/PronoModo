@@ -158,7 +158,7 @@ async def bet(modo: int, gameid: int, score1: int, score2: int):
     bo = mycursor.fetchone()[0]
 
     m = max(score1, score2)
-    if m*2 -1 != bo or score1+score2 > m:
+    if m*2 -1 != bo or score1+score2 > bo:
         return {"status": "Fail", "message": "Incorrect bet"}
 
     if bets:
