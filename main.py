@@ -305,3 +305,18 @@ async def cancel(id : int):
     mydb.commit()
     mydb.close()
     return {"status": "success", "message": f"Bet {id} cancelled"}
+
+@app.delete("/admin/competition")
+async def del_competition(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT * FROM tournaments WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    results = mycursor.fetchall()
+    if results:
+        sql = "DELETE FROM tournaments WHERE id = %s"
+        mycursor.execute(sql, (id,))
+        mydb.commit()
+        mydb.close()
+        return {"status": "success", "message": f"Tournament {id} deleted"}
+    return {"status": "fail", "message": f"Tournament {id} not found"}
