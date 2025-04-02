@@ -42,7 +42,7 @@ def get_competitions():
 
     # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
     data = [comp for comp in response if "LCK CL" not in comp["Name"]]
-    data = [comp for comp in response if "LCK AS" not in comp["Name"]]
+    data = [comp for comp in data if "LCK AS" not in comp["Name"]]
     return data
 
 def get_schedule(competition: str):
