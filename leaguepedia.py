@@ -115,6 +115,7 @@ def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
     if url is None:
         logging.warning(f"No logo found for team {team}")
         return
+    logging.info(f"URL updated for {team} ({shortcode}).")
     _upsert_team_logo(shortcode, url)
 
 def _upsert_team_logo(shortcode: str, url: str):
