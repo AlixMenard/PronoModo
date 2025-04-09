@@ -241,6 +241,7 @@ async def bets(modo: int):
     sql = """SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
              WHERE b.modo = %s
+             ORDER BY m.date DESC 
              LIMIT 20"""
     mycursor.execute(sql, (modo,))
     results = mycursor.fetchall()
