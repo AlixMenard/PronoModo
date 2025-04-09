@@ -95,7 +95,9 @@ def _get_team_logo_urls() -> dict[str, str]:
 
 def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
     # If refresh is not explicitly requested and the logo already exists, do nothing.
+    print(f"call {shortcode}:", end="")
     if not refresh and get_team_logo_url(shortcode) is not None:
+        print('pass')
         return
 
     site = EsportsClient("lol")
