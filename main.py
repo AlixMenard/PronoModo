@@ -78,6 +78,8 @@ def update_matches():
     saved_competitions = [n[0] for n in mycursor.fetchall()]
     for competition in competitions:
         if competition["Name"] not in saved_competitions:
+            if competition["End"] is None:
+                competition["End"] = datetime.now(timezone.utc) + timedelta(days=100)
             sql = "INSERT INTO tournaments (name, start, end) VALUES (%s, %s, %s)"
             mycursor.execute(sql, (competition["Name"], competition["Start"], competition["End"]))
         else:
