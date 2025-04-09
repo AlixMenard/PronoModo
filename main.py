@@ -242,7 +242,7 @@ async def bets(modo: int):
              JOIN matches AS m ON m.id=b.matchid 
              WHERE b.modo = %s
              ORDER BY m.date DESC 
-             LIMIT 20"""
+             LIMIT 50"""
     mycursor.execute(sql, (modo,))
     results = mycursor.fetchall()
     mycursor.close()
