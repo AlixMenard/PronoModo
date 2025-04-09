@@ -27,6 +27,7 @@ def _catch_names(name):
 
 def get_competitions():
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    week_plus_one = datetime.now(timezone.utc) + timedelta(days=7)
 
     leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"]
     league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")"
@@ -36,7 +37,7 @@ def get_competitions():
         tables = "MatchSchedule=MS, Tournaments=T",
         join_on="MS.OverviewPage=T.OverviewPage",
         fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.Date >= '{yesterday}' AND {league_filter}",
+        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)",
         group_by="T.Name"
     )
 
