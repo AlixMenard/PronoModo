@@ -59,7 +59,7 @@ CREATE TABLE `tournaments`
     `id`    int(11) PRIMARY KEY AUTO_INCREMENT,
     `name`  varchar(250) NOT NULL,
     `start` datetime     NOT NULL,
-    `end`   datetime     NOT NULL
+    `end`   datetime
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
