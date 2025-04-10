@@ -36,13 +36,6 @@ def update_matches():
     mydb = get_session()
     mycursor = mydb.cursor()
 
-    #! todo : remove
-    mycursor.execute("ALTER TABLE scores ADD COLUMN rating FLOAT DEFAULT 0;")
-    mycursor.execute("ALTER TABLE scores ADD COLUMN accuracy FLOAT DEFAULT 0;")
-    mydb.commit()
-    mydb.close()
-    raise Exception("C'est fait")
-
     mycursor.execute("SELECT team1, team2, date, status FROM matches")
     saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")): status for team1, team2, date, status in
                      mycursor.fetchall()}  # 2025-03-17 16:00:00
