@@ -97,9 +97,11 @@ def update_matches():
         else:
             bets[bet[1]].append((bet[0], Bet("", "", bet[2], bet[3])))
     results = dict()
+    max_points = 0
     for match in matches:
         if match[0] not in results:
             results[match[0]] = (match[3], Result(match[1], match[2], match[4], match[5]))
+            max_points += results[match[0]][1].bo
 
     modos = dict()
     for r_ in results:
@@ -111,11 +113,11 @@ def update_matches():
                 if not b[0] in modos:
                     modos[b[0]] = dict()
                 if not r[0] in modos[b[0]]:
-                    modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo)
+                    modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo, b[1].bo) #score, num_bets, perfect | pts_max (somme .bo)
                 else:
                     s = b[1] + r[1]
                     modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1] + 1,
-                                         modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2])
+                                         modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2], modos[b[0]][r[0]][3] + b[1].bo)
     mycursor.execute(f"SELECT modo, tournament FROM scores")
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
@@ -123,10 +125,12 @@ def update_matches():
             if (m, t) in scores:
                 sql = """
                             UPDATE scores
-                            SET scores.num_bets = %s, score = %s, perfect = %s
+                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s
                             WHERE modo = %s AND tournament = %s
                 """
-                mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2], m, t))
+                mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2],
+                                       round(modos[m][t][0]/max_points,2), round(modos[m][t][0]/modos[m][t][3],2),
+                                       m, t))
             else:
                 sql = """
                         INSERT INTO scores (modo, tournament, num_bets, score, perfect) 
@@ -255,7 +259,7 @@ async def bets(modo: int):
 async def ranking(competition: int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.name, s.num_bets, s.score FROM scores AS s
+    sql = """SELECT m.name, s.num_bets, s.score, s.rating, s.accuracy FROM scores AS s
              JOIN modos AS m ON m.id=s.modo
              JOIN tournaments AS t ON s.tournament=t.name 
              WHERE t.id = %s
