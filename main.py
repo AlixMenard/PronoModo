@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
@@ -97,11 +99,11 @@ def update_matches():
         else:
             bets[bet[1]].append((bet[0], Bet("", "", bet[2], bet[3])))
     results = dict()
-    max_points = 0
+    max_points = defaultdict(int)
     for match in matches:
         if match[0] not in results:
             results[match[0]] = (match[3], Result(match[1], match[2], match[4], match[5]))
-            max_points += results[match[0]][1].bo
+            max_points[match[3]] += results[match[0]][1].bo
 
     modos = dict()
     for r_ in results:
@@ -129,7 +131,7 @@ def update_matches():
                             WHERE modo = %s AND tournament = %s
                 """
                 mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2],
-                                       round(modos[m][t][0]/max_points,2), round(modos[m][t][0]/modos[m][t][3],2),
+                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2),
                                        m, t))
             else:
                 sql = """
