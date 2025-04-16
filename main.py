@@ -174,14 +174,14 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     mycursor.execute(sql, (modo,))
     db_modo = mycursor.fetchall()[0]
     if db_modo[1].tzinfo is None:
-        db_modo[1] = db_modo[1].replace(tzinfo=timezone.utc)
+        db_modo_aware = db_modo[1].replace(tzinfo=timezone.utc)
     else:
-        db_modo[1] = db_modo[1]
+        db_modo_aware = db_modo[1]
     if token != db_modo[0]:
         mydb.commit()
         mydb.close()
         return {'status': 'Incorrect token'}
-    if db_modo[1] < datetime.now(timezone.utc) - timedelta(30):
+    if db_modo_aware < datetime.now(timezone.utc) - timedelta(30):
         mydb.commit()
         mydb.close()
         return {'status': 'Expired token'}
