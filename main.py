@@ -10,6 +10,9 @@ from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 from pydantic import BaseModel
 
+import secrets
+import hashlib
+
 from bets import *
 from leaguepedia import *
 
@@ -33,6 +36,11 @@ def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
         database="pronosmodo"
     )
 
+def get_token():
+    return secrets.token_hex(32)
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def update_matches():
     mydb = get_session()
@@ -155,9 +163,25 @@ async def health():
 
 
 @app.post("/bet")
-async def bet(modo: int, gameid: int, score1: int, score2: int):
+async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     mydb = get_session()
     mycursor = mydb.cursor()
+
+    #? ID check
+    sql = """
+            SELECT token, last_refresh FROM modos WHERE id = %s
+          """
+    mycursor.execute(sql, (modo,))
+    db_modo = mycursor.fetchall()[0]
+    if token != db_modo[0]:
+        mydb.commit()
+        mydb.close()
+        return {'status': 'Incorrect token'}
+    if db_modo[1] < datetime.now(timezone.utc) - timedelta(30):
+        mydb.commit()
+        mydb.close()
+        return {'status': 'Expired token'}
+
 
     mycursor.execute("SELECT * from bets WHERE modo = %s AND matchid = %s", (modo, gameid))
     bets = mycursor.fetchall()
@@ -192,16 +216,29 @@ async def bet(modo: int, gameid: int, score1: int, score2: int):
 
 
 @app.post("/signin")
-async def signin(modo: str):
+async def signin(modo: str, password: str):
+    hash_pwd = hash_password(password)
     mydb = get_session()
     mycursor = mydb.cursor()
 
-    mycursor.execute("SELECT id, name FROM modos WHERE name = %s", (modo,))
+    mycursor.execute("SELECT id, name, password FROM modos WHERE name = %s", (modo,))
     modos = mycursor.fetchall()
     if modos:
-        mydb.commit()
-        mydb.close()
-        return {'id': modos[0][0], 'name': modos[0][1]}
+        if modos[0][2] is None or modos[0][2] == hash_pwd:
+            token = get_token()
+            sql = """
+                    UPDATE modos 
+                    SET password = %s, token = %s, last_refresh = %s
+                    WHERE name = %s
+                """
+            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc)))
+            mydb.commit()
+            mydb.close()
+            return {'id': modos[0][0], 'name': modos[0][1], 'token': token}
+        else:
+            mydb.commit()
+            mydb.close()
+            return {'status' : "Incorrect password."}
 
     mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
     modo_id = mycursor.lastrowid
@@ -329,3 +366,4 @@ async def del_competition(id : int):
         mydb.close()
         return {"status": "success", "message": f"Tournament {id} deleted"}
     return {"status": "fail", "message": f"Tournament {id} not found"}
+

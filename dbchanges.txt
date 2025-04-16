@@ -1,0 +1,3 @@
+ALTER TABLE modos ADD password varchar(255);
+ALTER TABLE modos ADD token varchar(255);
+ALTER TABLE modos ADD last_refresh datetime;
