@@ -173,6 +173,10 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
           """
     mycursor.execute(sql, (modo,))
     db_modo = mycursor.fetchall()[0]
+    if db_modo[1].tzinfo is None:
+        db_modo = db_modo[1].replace(tzinfo=timezone.utc)
+    else:
+        db_modo = db_modo[1]
     if token != db_modo[0]:
         mydb.commit()
         mydb.close()
