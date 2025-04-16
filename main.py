@@ -231,7 +231,7 @@ async def signin(modo: str, password: str):
                     SET password = %s, token = %s, last_refresh = %s
                     WHERE name = %s
                 """
-            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc)))
+            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc), modo))
             mydb.commit()
             mydb.close()
             return {'id': modos[0][0], 'name': modos[0][1], 'token': token}
