@@ -27,6 +27,7 @@ def _catch_names(name):
 
 def get_competitions():
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    week_plus_one = datetime.now(timezone.utc) + timedelta(days=7)
 
     leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"]
     league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")"
@@ -36,12 +37,13 @@ def get_competitions():
         tables = "MatchSchedule=MS, Tournaments=T",
         join_on="MS.OverviewPage=T.OverviewPage",
         fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.Date >= '{yesterday}' AND {league_filter}",
+        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)",
         group_by="T.Name"
     )
 
     # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
     data = [comp for comp in response if "LCK CL" not in comp["Name"]]
+    data = [comp for comp in data if "LCK AS" not in comp["Name"]]
     return data
 
 def get_schedule(competition: str):
@@ -51,12 +53,18 @@ def get_schedule(competition: str):
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
         fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score",
         where=f"T.Name = '{competition}'",
-        group_by="Teams1.Short, Teams2.Short"
+        group_by="Teams1.Short, Teams2.Short, MS.DateTime_UTC",
+        order_by="MS.DateTime_UTC"
     )
 
     now = datetime.now(timezone.utc)
 
+    to_remove = []
+
     for r in competition_data:
+        if r["Date"] is None:
+            to_remove.append(r)
+            continue
         if r["Winner"] is None:
             scheduled_datetime = datetime.strptime(r["Date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             r["Status"] = "Ongoing" if scheduled_datetime < now else "Waiting"
@@ -71,6 +79,9 @@ def get_schedule(competition: str):
             r["Short2"] = _catch_names(r["Team2Final"])
         _update_team_logo_url_from_api(r["Team2Final"], r["Short2"])
 
+    for r in to_remove:
+        competition_data.remove(r)
+
     return competition_data
 
 @functools.lru_cache(maxsize=256)
@@ -84,6 +95,7 @@ def _get_team_logo_urls() -> dict[str, str]:
 
 def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
     # If refresh is not explicitly requested and the logo already exists, do nothing.
+
     if not refresh and get_team_logo_url(shortcode) is not None:
         return
 
@@ -104,6 +116,7 @@ def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
     if url is None:
         logging.warning(f"No logo found for team {team}")
         return
+    logging.info(f"URL updated for {team} ({shortcode}).")
     _upsert_team_logo(shortcode, url)
 
 def _upsert_team_logo(shortcode: str, url: str):

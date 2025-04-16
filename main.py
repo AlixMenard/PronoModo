@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
@@ -78,6 +80,8 @@ def update_matches():
     saved_competitions = [n[0] for n in mycursor.fetchall()]
     for competition in competitions:
         if competition["Name"] not in saved_competitions:
+            if competition["End"] is None:
+                competition["End"] = datetime.now(timezone.utc) + timedelta(days=100)
             sql = "INSERT INTO tournaments (name, start, end) VALUES (%s, %s, %s)"
             mycursor.execute(sql, (competition["Name"], competition["Start"], competition["End"]))
         else:
@@ -95,9 +99,11 @@ def update_matches():
         else:
             bets[bet[1]].append((bet[0], Bet("", "", bet[2], bet[3])))
     results = dict()
+    max_points = defaultdict(int)
     for match in matches:
         if match[0] not in results:
             results[match[0]] = (match[3], Result(match[1], match[2], match[4], match[5]))
+            max_points[match[3]] += results[match[0]][1].bo
 
     modos = dict()
     for r_ in results:
@@ -109,11 +115,11 @@ def update_matches():
                 if not b[0] in modos:
                     modos[b[0]] = dict()
                 if not r[0] in modos[b[0]]:
-                    modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo)
+                    modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo, b[1].bo) #score, num_bets, perfect | pts_max (somme .bo)
                 else:
                     s = b[1] + r[1]
                     modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1] + 1,
-                                         modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2])
+                                         modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2], modos[b[0]][r[0]][3] + b[1].bo)
     mycursor.execute(f"SELECT modo, tournament FROM scores")
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
@@ -121,10 +127,12 @@ def update_matches():
             if (m, t) in scores:
                 sql = """
                             UPDATE scores
-                            SET scores.num_bets = %s, score = %s, perfect = %s
+                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s
                             WHERE modo = %s AND tournament = %s
                 """
-                mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2], m, t))
+                mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2],
+                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2),
+                                       m, t))
             else:
                 sql = """
                         INSERT INTO scores (modo, tournament, num_bets, score, perfect) 
@@ -158,7 +166,7 @@ async def bet(modo: int, gameid: int, score1: int, score2: int):
     bo = mycursor.fetchone()[0]
 
     m = max(score1, score2)
-    if m*2 -1 != bo or score1+score2 > m:
+    if m*2 -1 != bo or score1+score2 > bo:
         return {"status": "Fail", "message": "Incorrect bet"}
 
     if bets:
@@ -239,7 +247,8 @@ async def bets(modo: int):
     sql = """SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
              WHERE b.modo = %s
-             LIMIT 20"""
+             ORDER BY m.date DESC 
+             LIMIT 50"""
     mycursor.execute(sql, (modo,))
     results = mycursor.fetchall()
     mycursor.close()
@@ -252,7 +261,7 @@ async def bets(modo: int):
 async def ranking(competition: int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.name, s.num_bets, s.score FROM scores AS s
+    sql = """SELECT m.name, s.num_bets, s.score, s.rating, s.accuracy FROM scores AS s
              JOIN modos AS m ON m.id=s.modo
              JOIN tournaments AS t ON s.tournament=t.name 
              WHERE t.id = %s
@@ -305,3 +314,18 @@ async def cancel(id : int):
     mydb.commit()
     mydb.close()
     return {"status": "success", "message": f"Bet {id} cancelled"}
+
+@app.delete("/admin/competition")
+async def del_competition(id : int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT * FROM tournaments WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    results = mycursor.fetchall()
+    if results:
+        sql = "DELETE FROM tournaments WHERE id = %s"
+        mycursor.execute(sql, (id,))
+        mydb.commit()
+        mydb.close()
+        return {"status": "success", "message": f"Tournament {id} deleted"}
+    return {"status": "fail", "message": f"Tournament {id} not found"}
