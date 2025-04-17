@@ -369,6 +369,21 @@ async def match_hint(id:int):
     exp = bo_expectation(match_["team1"], match_["team2"], match_["bo"])
     return {'status': "Success", 'score': exp[0], 'ratio': exp[1]}
     
+@app.get("/match/stats")
+async def team_stats(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT tournament, team1, team2 FROM matches WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    m = mycursor.fetchone()
+    mydb.close()
+
+    stats1 = get_team_stats(m["team1"])
+    stats2 = get_team_stats(m["team2"])
+
+    data = {m["team1"]: stats1, m["team2"]: stats2}
+
+    return {'status': "Success", 'data': data}
 
 
 #? admin routes
