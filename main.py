@@ -325,7 +325,22 @@ async def del_competition(id : int):
     if results:
         sql = "DELETE FROM tournaments WHERE id = %s"
         mycursor.execute(sql, (id,))
+
+        name = results[0]["name"]
+        sql = "DELETE FROM matches WHERE tournament = %s"
+        mycursor.execute(sql, (name,))
+
         mydb.commit()
         mydb.close()
         return {"status": "success", "message": f"Tournament {id} deleted"}
     return {"status": "fail", "message": f"Tournament {id} not found"}
+
+@app.delete("/admin/match")
+async def del_match(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor()
+    sql = "DELETE FROM matches WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    mydb.commit()
+    mydb.close()
+    return {"status": "success", "message": f"Match {id} deleted"}
