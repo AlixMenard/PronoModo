@@ -83,7 +83,7 @@ def get_league_power(region:str):
 
     sql = "SELECT AVG(power) FROM teams WHERE region = %s"
     mycursor.execute(sql, (region,))
-    power = mycursor.fetchone()
+    power = mycursor.fetchone()[0]
     return power if power is not None else 800
 
 def register_team(name:str, slug:str, competition:str):
