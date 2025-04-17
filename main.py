@@ -200,7 +200,7 @@ async def get_user(name:str):
     mycursor = mydb.cursor()
 
     sql = """
-            SELECT id, name FROM modo WHERE name = %s
+            SELECT id, name FROM modos WHERE name = %s
         """
     mycursor.execute(sql, (name,))
     modo = mycursor.fetchall()
