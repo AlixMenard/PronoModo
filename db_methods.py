@@ -14,7 +14,7 @@ def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
 # Team stats
 def get_teams(region:str|None = None):
     mydb = get_session()
-    mycursor = mydb.cursor(dictionnary=True)
+    mycursor = mydb.cursor(dictionary=True)
     sql = "SELECT slug, name, region, power FROM teams"
     if region is not None:
         sql += " WHERE region = %s"
