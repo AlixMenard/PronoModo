@@ -338,7 +338,7 @@ async def ranking(competition: int):
 class LogoResponse(BaseModel):
     url: str
 
-@app.get("/logo")
+@app.get("/team/logo")
 async def logo(team: str):
     url = get_team_logo_url(team.upper())
     if url is None:
