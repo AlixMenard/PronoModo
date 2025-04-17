@@ -358,7 +358,7 @@ async def match_hint(id:int):
     if match_["status"] != "Waiting":
         return {'status': "Fail", 'message': "Match has already started"}
     exp = bo_expectation(match_["team1"], match_["team2"], match_["bo"])
-    return {'status': "Success", 'score': exp}
+    return {'status': "Success", 'score': exp[0], 'ratio': exp[1]}
     
 
 
