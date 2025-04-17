@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from db_methods import *
+from teamdbmethods import *
 
 import secrets
 import hashlib
@@ -66,6 +66,8 @@ def update_matches():
             if (team1, team2, date) in saved_matches:
                 if saved_matches[(team1, team2, date)] == status and status == "Done":
                     continue
+                if status == "Done": #If match just finished
+                    update_power(team1, team2, score1, score2, bo)
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
@@ -148,7 +150,6 @@ def update_matches():
                 """
                 mycursor.execute(sql, (m, t, modos[m][t][1], modos[m][t][0], modos[m][t][2]))
     mydb.commit()
-
     mydb.close()
 
 
