@@ -171,5 +171,6 @@ def get_team_stats(slug:str, tournament:str):
     result["bo3"] = {'result': track_record_BO3[:2], 'score': track_record_BO3[2:]}
     result["bo5"] = {'result': track_record_BO5[:2], 'score': track_record_BO5[2:]}
     result["in_league"] = track_record_league
+    result["last_5"] = matches[-5:]
     return result
         
