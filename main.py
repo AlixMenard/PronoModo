@@ -162,6 +162,58 @@ async def health():
     return {"status": "HEALTHY"}
 
 
+@app.post("/signin")
+async def signin(modo: str, password: str):
+    hash_pwd = hash_password(password)
+    mydb = get_session()
+    mycursor = mydb.cursor()
+
+    mycursor.execute("SELECT id, name, password FROM modos WHERE name = %s", (modo,))
+    modos = mycursor.fetchall()
+    if modos:
+        if modos[0][2] is None or modos[0][2] == hash_pwd:
+            token = get_token()
+            sql = """
+                    UPDATE modos 
+                    SET password = %s, token = %s, last_refresh = %s
+                    WHERE name = %s
+                """
+            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc), modo))
+            mydb.commit()
+            mydb.close()
+            return {'id': modos[0][0], 'name': modos[0][1], 'token': token}
+        else:
+            mydb.commit()
+            mydb.close()
+            return {'status' : "Incorrect password."}
+
+    mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
+    modo_id = mycursor.lastrowid
+    mydb.commit()
+    mydb.close()
+    return {'id': modo_id, 'name': modo}
+
+
+@app.get("/user")
+async def get_user(name:str):
+    mydb = get_session()
+    mycursor = mydb.cursor()
+
+    sql = """
+            SELECT id, name FROM modo WHERE name = %s
+        """
+    mycursor.execute(sql, (name,))
+    modo = mycursor.fetchall()
+    if not modo:
+        mydb.commit()
+        mydb.close()
+        return {'status' : "Fail", 'message': "Invalid username"}
+    modo = modo[0]
+    mydb.commit()
+    mydb.close()
+    return {'status': "Success", 'name': name, 'id': modo[0]}
+
+
 @app.post("/bet")
 async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     mydb = get_session()
@@ -217,38 +269,6 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     mydb.commit()
     mydb.close()
     return {"status" : "Success", "action" : action}
-
-
-@app.post("/signin")
-async def signin(modo: str, password: str):
-    hash_pwd = hash_password(password)
-    mydb = get_session()
-    mycursor = mydb.cursor()
-
-    mycursor.execute("SELECT id, name, password FROM modos WHERE name = %s", (modo,))
-    modos = mycursor.fetchall()
-    if modos:
-        if modos[0][2] is None or modos[0][2] == hash_pwd:
-            token = get_token()
-            sql = """
-                    UPDATE modos 
-                    SET password = %s, token = %s, last_refresh = %s
-                    WHERE name = %s
-                """
-            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc), modo))
-            mydb.commit()
-            mydb.close()
-            return {'id': modos[0][0], 'name': modos[0][1], 'token': token}
-        else:
-            mydb.commit()
-            mydb.close()
-            return {'status' : "Incorrect password."}
-
-    mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
-    modo_id = mycursor.lastrowid
-    mydb.commit()
-    mydb.close()
-    return {'id': modo_id, 'name': modo}
 
 
 @app.get("/competitions")
