@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from db_methods import get_session
+from db_methods import *
 
 import secrets
 import hashlib
@@ -37,6 +37,9 @@ def update_matches():
     mydb = get_session()
     mycursor = mydb.cursor()
 
+    teams = get_teams()
+    team_slugs = [x["slug"] for x in teams]
+
     mycursor.execute("SELECT team1, team2, date, status FROM matches")
     saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")): status for team1, team2, date, status in
                      mycursor.fetchall()}  # 2025-03-17 16:00:00
@@ -46,9 +49,13 @@ def update_matches():
         for match in schedule:
             tournament = match['Name']
             team1 = match["Short1"] if match["Short1"] is not None else "TBD"
+            if team1 not in team_slugs:
+                register_team(match["Team1Final"], team1, tournament)
             score1 = match["Team1Score"]
             score1 = score1 if score1 is not None else 0
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
+            if team2 not in team_slugs:
+                register_team(match["Team2Final"], team2, tournament)
             score2 = match["Team2Score"]
             score2 = score2 if score2 is not None else 0
             bo = match["BestOf"]

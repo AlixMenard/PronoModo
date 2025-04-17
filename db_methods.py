@@ -74,3 +74,29 @@ def update_power(team1:str, team2:str, score1:int, score2:int, bo:int=1):
     mycursor.execute(sql, (power2, team2))
     mydb.commit()
     mydb.close()
+
+def get_league_power(region:str):
+    if region == "TBD":
+        return 800
+    mydb = get_session()
+    mycursor = mydb.cursor()
+
+    sql = "SELECT AVG(power) FROM teams WHERE region = %s"
+    mycursor.execute(sql, (region,))
+    power = mycursor.fetchone()
+    return power if power is not None else 800
+
+def register_team(name:str, slug:str, competition:str):
+    comp_dic = {"LEC":"EMEA", "LPL":"CN", "LCK":"KR", "LFL":"ERL", "":"TBD"}
+    for key in comp_dic:
+        if key in competition:
+            region = comp_dic[key]
+            break
+    power = get_league_power(region)
+
+    mydb = get_session()
+    mycursor = mydb.cursor()
+    sql = "INSERT INTO teams (name, slug, region, power) VALUES (%s, %s, %s, %s)"
+    mycursor.execute(sql, (name, slug, region, power))
+    mydb.commit()
+    mydb.close()
