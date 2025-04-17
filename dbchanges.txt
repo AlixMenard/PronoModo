@@ -1,3 +1,14 @@
+//auth alters
 ALTER TABLE modos ADD password varchar(255);
 ALTER TABLE modos ADD token varchar(255);
 ALTER TABLE modos ADD last_refresh datetime;
+
+//team stats alters
+CREATE TABLE teams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(255) UNIQUE,
+    name VARCHAR(255) UNIQUE,
+    region VARCHAR(255),
+    power FLOAT
+);
+//initiate teams with Riot power ranking
