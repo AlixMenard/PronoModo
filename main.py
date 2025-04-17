@@ -303,15 +303,23 @@ async def matches(competition: int):
     return JSONResponse(content=jsonable_encoder(results))
 
 @app.get("/bets")
-async def bets(modo: int):
+async def bets(modo: int, league:str = None, team:str = None):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
+    sql = f"""SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
-             WHERE b.modo = %s
+             WHERE b.modo = %s{" AND m.tournament = %s" if league is not None else ""}{" AND (m.team1 = %s OR m.team2 = %s)" if team is not None else ""}
              ORDER BY m.date DESC 
              LIMIT 50"""
-    mycursor.execute(sql, (modo,))
+    if league is None and team is None:
+        params = (modo,)
+    elif league is None:
+        params = (modo, team, team)
+    elif team is None:
+        params = (modo, league)
+    else:
+        params = (modo, league, team, team)
+    mycursor.execute(sql, params)
     results = mycursor.fetchall()
     mycursor.close()
     mydb.close()
