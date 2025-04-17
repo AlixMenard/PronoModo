@@ -51,11 +51,13 @@ def update_matches():
             team1 = match["Short1"] if match["Short1"] is not None else "TBD"
             if team1 not in team_slugs:
                 register_team(match["Team1Final"], team1, tournament)
+                team_slugs.append(team1)
             score1 = match["Team1Score"]
             score1 = score1 if score1 is not None else 0
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
             if team2 not in team_slugs:
                 register_team(match["Team2Final"], team2, tournament)
+                team_slugs.append(team2)
             score2 = match["Team2Score"]
             score2 = score2 if score2 is not None else 0
             bo = match["BestOf"]
