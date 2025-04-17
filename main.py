@@ -378,8 +378,8 @@ async def team_stats(id:int):
     m = mycursor.fetchone()
     mydb.close()
 
-    stats1 = get_team_stats(m["team1"])
-    stats2 = get_team_stats(m["team2"])
+    stats1 = get_team_stats(m["team1"], m["tournament"])
+    stats2 = get_team_stats(m["team2"], m["tournament"])
 
     data = {m["team1"]: stats1, m["team2"]: stats2}
 
