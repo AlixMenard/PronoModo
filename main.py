@@ -1,14 +1,13 @@
 from collections import defaultdict
 
-import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from mysql.connector.abstracts import MySQLConnectionAbstract
-from mysql.connector.pooling import PooledMySQLConnection
 from pydantic import BaseModel
+
+from db_methods import get_session
 
 import secrets
 import hashlib
@@ -27,14 +26,6 @@ app.add_middleware(
 
 scheduler = BackgroundScheduler()
 
-def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
-    return mysql.connector.connect(
-        host="db-test",
-        port=3306,
-        user="root",
-        password="azbecbaboevav",
-        database="pronosmodo"
-    )
 
 def get_token():
     return secrets.token_hex(32)
