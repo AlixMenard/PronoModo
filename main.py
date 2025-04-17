@@ -163,6 +163,7 @@ async def health():
     return {"status": "HEALTHY"}
 
 
+#? User routes
 @app.post("/signin")
 async def signin(modo: str, password: str):
     hash_pwd = hash_password(password)
@@ -194,7 +195,6 @@ async def signin(modo: str, password: str):
     mydb.close()
     return {'id': modo_id, 'name': modo}
 
-
 @app.get("/user")
 async def get_user(name:str):
     mydb = get_session()
@@ -215,6 +215,7 @@ async def get_user(name:str):
     return {'status': "Success", 'name': name, 'id': modo[0]}
 
 
+#? Action routes
 @app.post("/bet")
 async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     mydb = get_session()
@@ -272,6 +273,7 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
     return {"status" : "Success", "action" : action}
 
 
+#? Data routes
 @app.get("/competitions")
 async def competitions():
     mydb = get_session()
@@ -284,7 +286,6 @@ async def competitions():
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
-
 
 @app.get("/matches")
 async def matches(competition: int):
@@ -300,7 +301,6 @@ async def matches(competition: int):
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
-
 
 @app.get("/bets")
 async def bets(modo: int):
@@ -318,7 +318,6 @@ async def bets(modo: int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
-
 @app.get("/ranking")
 async def ranking(competition: int):
     mydb = get_session()
@@ -335,15 +334,33 @@ async def ranking(competition: int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+#? Team routes
 class LogoResponse(BaseModel):
     url: str
-
 @app.get("/team/logo")
 async def logo(team: str):
     url = get_team_logo_url(team.upper())
     if url is None:
         raise HTTPException(status_code=404, detail="Team logo not found")
     return LogoResponse(url=url)
+
+
+#? Match routes
+@app.get("/match/hint")
+async def match_hint(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT team1, team2, bo, status FROM matches WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    match_ = mycursor.fetchone()
+    mydb.commit()
+    mydb.close()
+    if match_["status"] != "Waiting":
+        return {'status': "Fail", 'message': "Match has already started"}
+    exp = bo_expectation(match_["team1"], match_["team2"], match_["bo"])
+    return {'status': "Success", 'score': exp}
+    
+
 
 #? admin routes
 @app.get("/admin/users")
