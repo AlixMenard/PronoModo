@@ -42,7 +42,7 @@ def update_matches():
     team_slugs = [x["slug"] for x in teams]
 
     mycursor.execute("SELECT leaguepediaId, status FROM matches")
-    saved_matches = {id : status for id in mycursor.fetchall()}  # 2025-03-17 16:00:00
+    saved_matches = {id : status for id, status in mycursor.fetchall()}  # 2025-03-17 16:00:00
     competitions = get_competitions()
     for competition in competitions:
         schedule = get_schedule(competition["Name"])
