@@ -63,7 +63,7 @@ def update_matches():
             bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
-            id = match["leaguepediaId"]
+            id = match["MatchId"]
             if id in saved_matches:
                 if saved_matches[id] == status and status == "Done":
                     continue
