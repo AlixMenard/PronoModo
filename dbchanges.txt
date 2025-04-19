@@ -3,6 +3,11 @@ ALTER TABLE modos ADD password varchar(255);
 ALTER TABLE modos ADD token varchar(255);
 ALTER TABLE modos ADD last_refresh datetime;
 
+//matches alters
+ALTER TABLE matches
+ADD COLUMN leaguepediaId VARCHAR(255) NULL,
+ADD UNIQUE INDEX idx_leaguepedia_id (leaguepediaId);
+
 //team stats alters
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,

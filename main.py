@@ -41,9 +41,8 @@ def update_matches():
     teams = get_teams()
     team_slugs = [x["slug"] for x in teams]
 
-    mycursor.execute("SELECT team1, team2, date, status FROM matches")
-    saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")): status for team1, team2, date, status in
-                     mycursor.fetchall()}  # 2025-03-17 16:00:00
+    mycursor.execute("SELECT leaguepediaId, status FROM matches")
+    saved_matches = {id : status for id in mycursor.fetchall()}  # 2025-03-17 16:00:00
     competitions = get_competitions()
     for competition in competitions:
         schedule = get_schedule(competition["Name"])
@@ -64,25 +63,26 @@ def update_matches():
             bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
-            if (team1, team2, date) in saved_matches:
-                if saved_matches[(team1, team2, date)] == status and status == "Done":
+            id = match["leaguepediaId"]
+            if id in saved_matches:
+                if saved_matches[id] == status and status == "Done":
                     continue
                 if status == "Done": #If match just finished
                     update_power(team1, team2, score1, score2, bo)
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s, bo = %s
-                            WHERE team1 = %s AND team2 = %s AND date = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s
+                            WHERE leaguepediaId = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, bo, team1, team2, date))
+                mycursor.execute(sql, (score1, score2, status, bo, date, id))
             else:
                 # Match does not exist, insert it
                 sql = """
-                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status, leaguepediaId) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status))
+                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status, id))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
