@@ -59,7 +59,7 @@ def update_power(team1:str, team2:str, score1:int, score2:int, bo:int=1):
     result = int(score1>score2)
     modifier = {1: 1, 3: 1.5, 5: 2.25}
     
-    delta = 32 * (result - expected)**modifier[bo]
+    delta = real(32 * (result - expected)**modifier[bo])
 
     mydb = get_session()
     mycursor = mydb.cursor()
