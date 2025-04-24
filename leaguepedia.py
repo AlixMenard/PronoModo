@@ -16,6 +16,7 @@ _KNOWN_NAMES = {
     "FC Schalke 04 Esports": "S04",
     "Nameless (French Team)": "NMS",
     "Vikings Esports (2023 Vietnamese Team)": "VKE",
+    "LYON (2024 American Team)": "LYON"
 }
 
 def _catch_names(name):
