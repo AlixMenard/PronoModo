@@ -113,7 +113,7 @@ def get_team_stats(slug:str, tournament:str):
             FROM matches 
             WHERE status = 'Done' AND (team1=%s OR team2=%s) AND date > %s
             ORDER BY date"""
-    mycursor.execute(sql, (slug, slug, datetime.now(timezone.utc)-timedelta(days=365)))
+    mycursor.execute(sql, (slug, slug, datetime(datetime.now(timezone.utc).year, 1, 1, tzinfo=timezone.utc)))
     matches = mycursor.fetchall()
     mydb.close()
 
