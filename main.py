@@ -385,6 +385,18 @@ async def team_stats(id:int):
 
     return {'status': "Success", 'data': data}
 
+@app.get("/match/bets")
+async def match_results(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = """SELECT b.id, b.team1bet, b.team2bet, m.name
+             FROM bets as b 
+             JOIN modos as m ON m.id = b.modo
+             WHERE matchid = %s """
+    mycursor.execute(sql, (id,))
+    bets = mycursor.fetchall()
+    mydb.close()
+    return bets
 
 #? admin routes
 @app.get("/admin/users")
