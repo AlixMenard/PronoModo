@@ -29,7 +29,7 @@ def get_competitions():
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     week_plus_one = datetime.now(timezone.utc) + timedelta(days=7)
 
-    leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK"]
+    leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK", "LPL", "LTA", "LCP"]
     league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")"
 
     site = EsportsClient("lol")
@@ -37,13 +37,15 @@ def get_competitions():
         tables = "MatchSchedule=MS, Tournaments=T",
         join_on="MS.OverviewPage=T.OverviewPage",
         fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)",
+        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)", #
         group_by="T.Name"
     )
 
     # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
     data = [comp for comp in response if "LCK CL" not in comp["Name"]]
     data = [comp for comp in data if "LCK AS" not in comp["Name"]]
+    data = [comp for comp in data if "Unicef" not in comp["Name"]]
+    data = [comp for comp in data if "LPLOL" not in comp["Name"]]
     return data
 
 def get_schedule(competition: str):
