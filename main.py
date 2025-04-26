@@ -307,7 +307,7 @@ async def matches(competition: int):
 async def bets(modo: int, league:str = None, team:str = None):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = f"""SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
+    sql = f"""SELECT b.id, m.id AS matchId, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
              WHERE b.modo = %s{" AND m.tournament = %s" if league is not None else ""}{" AND (m.team1 = %s OR m.team2 = %s)" if team is not None else ""}
              ORDER BY m.date DESC 
