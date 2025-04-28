@@ -1,14 +1,17 @@
 from collections import defaultdict
 
-import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from mysql.connector.abstracts import MySQLConnectionAbstract
-from mysql.connector.pooling import PooledMySQLConnection
 from pydantic import BaseModel
+
+from teamdbmethods import *
+from datetime import datetime, timedelta, timezone
+
+import secrets
+import hashlib
 
 from bets import *
 from leaguepedia import *
@@ -24,54 +27,62 @@ app.add_middleware(
 
 scheduler = BackgroundScheduler()
 
-def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
-    return mysql.connector.connect(
-        host="db",
-        port=3306,
-        user="root",
-        password="azbecbaboevav",
-        database="pronosmodo"
-    )
 
+def get_token():
+    return secrets.token_hex(32)
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def update_matches():
     mydb = get_session()
     mycursor = mydb.cursor()
 
-    mycursor.execute("SELECT team1, team2, date, status FROM matches")
-    saved_matches = {(team1, team2, date.strftime("%Y-%m-%d %H:%M:%S")): status for team1, team2, date, status in
-                     mycursor.fetchall()}  # 2025-03-17 16:00:00
+    teams = get_teams()
+    team_slugs = [x["slug"] for x in teams]
+
+    mycursor.execute("SELECT leaguepediaId, status FROM matches")
+    saved_matches = {id : status for id, status in mycursor.fetchall()}  # 2025-03-17 16:00:00
     competitions = get_competitions()
     for competition in competitions:
         schedule = get_schedule(competition["Name"])
         for match in schedule:
             tournament = match['Name']
             team1 = match["Short1"] if match["Short1"] is not None else "TBD"
+            if team1 not in team_slugs:
+                register_team(match["Team1Final"], team1, tournament)
+                team_slugs.append(team1)
             score1 = match["Team1Score"]
             score1 = score1 if score1 is not None else 0
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
+            if team2 not in team_slugs:
+                register_team(match["Team2Final"], team2, tournament)
+                team_slugs.append(team2)
             score2 = match["Team2Score"]
             score2 = score2 if score2 is not None else 0
             bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
-            if (team1, team2, date) in saved_matches:
-                if saved_matches[(team1, team2, date)] == status and status == "Done":
+            id = match["MatchId"]
+            if id in saved_matches:
+                if saved_matches[id] == status and status == "Done":
                     continue
+                if status == "Done": #If match just finished
+                    update_power(team1, team2, score1, score2, bo)
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s, bo = %s
-                            WHERE team1 = %s AND team2 = %s AND date = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s
+                            WHERE leaguepediaId = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, bo, team1, team2, date))
+                mycursor.execute(sql, (score1, score2, status, bo, date, id))
             else:
                 # Match does not exist, insert it
                 sql = """
-                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status, leaguepediaId) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status))
+                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status, id))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
@@ -140,7 +151,6 @@ def update_matches():
                 """
                 mycursor.execute(sql, (m, t, modos[m][t][1], modos[m][t][0], modos[m][t][2]))
     mydb.commit()
-
     mydb.close()
 
 
@@ -154,10 +164,83 @@ async def health():
     return {"status": "HEALTHY"}
 
 
-@app.post("/bet")
-async def bet(modo: int, gameid: int, score1: int, score2: int):
+#? User routes
+@app.post("/signin")
+async def signin(modo: str, password: str):
+    hash_pwd = hash_password(password)
     mydb = get_session()
     mycursor = mydb.cursor()
+
+    mycursor.execute("SELECT id, name, password FROM modos WHERE name = %s", (modo,))
+    modos = mycursor.fetchall()
+    if modos:
+        if modos[0][2] is None or modos[0][2] == hash_pwd:
+            token = get_token()
+            sql = """
+                    UPDATE modos 
+                    SET password = %s, token = %s, last_refresh = %s
+                    WHERE name = %s
+                """
+            mycursor.execute(sql, (hash_pwd, token, datetime.now(timezone.utc), modo))
+            mydb.commit()
+            mydb.close()
+            return {'id': modos[0][0], 'name': modos[0][1], 'token': token}
+        else:
+            mydb.commit()
+            mydb.close()
+            return {'status' : "Incorrect password."}
+
+    mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
+    modo_id = mycursor.lastrowid
+    mydb.commit()
+    mydb.close()
+    return {'id': modo_id, 'name': modo}
+
+@app.get("/user")
+async def get_user(name:str):
+    mydb = get_session()
+    mycursor = mydb.cursor()
+
+    sql = """
+            SELECT id, name FROM modos WHERE name = %s
+        """
+    mycursor.execute(sql, (name,))
+    modo = mycursor.fetchall()
+    if not modo:
+        mydb.commit()
+        mydb.close()
+        return {'status' : "Fail", 'message': "Invalid username"}
+    modo = modo[0]
+    mydb.commit()
+    mydb.close()
+    return {'status': "Success", 'name': name, 'id': modo[0]}
+
+
+#? Action routes
+@app.post("/bet")
+async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
+    mydb = get_session()
+    mycursor = mydb.cursor()
+
+    #? ID check
+    sql = """
+            SELECT token, last_refresh FROM modos WHERE id = %s
+          """
+    mycursor.execute(sql, (modo,))
+    db_modo = mycursor.fetchall()[0]
+    if db_modo[1].tzinfo is None:
+        db_modo_aware = db_modo[1].replace(tzinfo=timezone.utc)
+    else:
+        db_modo_aware = db_modo[1]
+    if token != db_modo[0]:
+        mydb.commit()
+        mydb.close()
+        return {'status': 'Incorrect token'}
+    if db_modo_aware < datetime.now(timezone.utc) - timedelta(30):
+        mydb.commit()
+        mydb.close()
+        return {'status': 'Expired token'}
+
 
     mycursor.execute("SELECT * from bets WHERE modo = %s AND matchid = %s", (modo, gameid))
     bets = mycursor.fetchall()
@@ -191,25 +274,7 @@ async def bet(modo: int, gameid: int, score1: int, score2: int):
     return {"status" : "Success", "action" : action}
 
 
-@app.post("/signin")
-async def signin(modo: str):
-    mydb = get_session()
-    mycursor = mydb.cursor()
-
-    mycursor.execute("SELECT id, name FROM modos WHERE name = %s", (modo,))
-    modos = mycursor.fetchall()
-    if modos:
-        mydb.commit()
-        mydb.close()
-        return {'id': modos[0][0], 'name': modos[0][1]}
-
-    mycursor.execute("INSERT INTO modos (name) VALUES (%s)", (modo,))
-    modo_id = mycursor.lastrowid
-    mydb.commit()
-    mydb.close()
-    return {'id': modo_id, 'name': modo}
-
-
+#? Data routes
 @app.get("/competitions")
 async def competitions():
     mydb = get_session()
@@ -222,7 +287,6 @@ async def competitions():
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
-
 
 @app.get("/matches")
 async def matches(competition: int):
@@ -239,23 +303,29 @@ async def matches(competition: int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
-
 @app.get("/bets")
-async def bets(modo: int):
+async def bets(modo: int, league:str = None, team:str = None):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT b.id, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
+    sql = f"""SELECT b.id, m.id AS matchId, m.team1, m.team2, b.team1bet, m.score1, b.team2bet, m.score2, m.date FROM bets AS b 
              JOIN matches AS m ON m.id=b.matchid 
-             WHERE b.modo = %s
+             WHERE b.modo = %s{" AND m.tournament = %s" if league is not None else ""}{" AND (m.team1 = %s OR m.team2 = %s)" if team is not None else ""}
              ORDER BY m.date DESC 
              LIMIT 50"""
-    mycursor.execute(sql, (modo,))
+    if league is None and team is None:
+        params = (modo,)
+    elif league is None:
+        params = (modo, team, team)
+    elif team is None:
+        params = (modo, league)
+    else:
+        params = (modo, league, team, team)
+    mycursor.execute(sql, params)
     results = mycursor.fetchall()
     mycursor.close()
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
-
 
 @app.get("/ranking")
 async def ranking(competition: int):
@@ -273,15 +343,60 @@ async def ranking(competition: int):
 
     return JSONResponse(content=jsonable_encoder(results))
 
+#? Team routes
 class LogoResponse(BaseModel):
     url: str
-
-@app.get("/logo")
+@app.get("/team/logo")
 async def logo(team: str):
     url = get_team_logo_url(team.upper())
     if url is None:
         raise HTTPException(status_code=404, detail="Team logo not found")
     return LogoResponse(url=url)
+
+
+#? Match routes
+@app.get("/match/hint")
+async def match_hint(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT team1, team2, bo, status FROM matches WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    match_ = mycursor.fetchone()
+    mydb.commit()
+    mydb.close()
+    if match_["status"] != "Waiting":
+        return {'status': "Fail", 'message': "Match has already started"}
+    exp = bo_expectation(match_["team1"], match_["team2"], match_["bo"])
+    return {'status': "Success", 'score': exp[0], 'ratio': exp[1]}
+    
+@app.get("/match/stats")
+async def team_stats(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = "SELECT tournament, team1, team2 FROM matches WHERE id = %s"
+    mycursor.execute(sql, (id,))
+    m = mycursor.fetchone()
+    mydb.close()
+
+    stats1 = get_team_stats(m["team1"], m["tournament"])
+    stats2 = get_team_stats(m["team2"], m["tournament"])
+
+    data = {m["team1"]: stats1, m["team2"]: stats2}
+
+    return {'status': "Success", 'data': data}
+
+@app.get("/match/bets")
+async def match_results(id:int):
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+    sql = """SELECT b.id, b.team1bet, b.team2bet, m.name
+             FROM bets as b 
+             JOIN modos as m ON m.id = b.modo
+             WHERE matchid = %s """
+    mycursor.execute(sql, (id,))
+    bets = mycursor.fetchall()
+    mydb.close()
+    return bets
 
 #? admin routes
 @app.get("/admin/users")

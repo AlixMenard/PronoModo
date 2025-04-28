@@ -1,0 +1,91 @@
+//auth alters
+ALTER TABLE modos ADD password varchar(255);
+ALTER TABLE modos ADD token varchar(255);
+ALTER TABLE modos ADD last_refresh datetime;
+
+//matches alters
+ALTER TABLE matches
+ADD COLUMN leaguepediaId VARCHAR(255) NULL,
+ADD UNIQUE INDEX idx_leaguepedia_id (leaguepediaId);
+ALTER TABLE matches
+DROP INDEX team1;
+
+//team stats alters
+CREATE TABLE teams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(255) UNIQUE,
+    name VARCHAR(255) UNIQUE,
+    region VARCHAR(255),
+    power FLOAT
+);
+//initiate teams with Riot power ranking (to complete)
+//KR
+INSERT INTO teams (slug, name, region, power) VALUES
+('GEN', 'Gen.G', 'KR', 1575),
+('HLE', 'Hanwha Life', 'KR', 1584),
+('T1', 'T1', 'KR', 1566),
+('DK', 'Dplus KIA', 'KR', 1438),
+('KT', 'KT Rolster', 'KR', 1342),
+('NS', 'NS RedForce', 'KR', 1322),
+('BFX', 'BNK FEARX', 'KR', 1259),
+('DNF', 'DN Freecs', 'KR', 1226),
+('DRX', 'DRX', 'KR', 1214),
+('BRO', 'OK BRION', 'KR', 1163);
+//CN
+INSERT INTO teams (slug, name, region, power) VALUES
+('BLG', 'Bilibili Gaming', 'CN', 1541),
+('TES', 'Top Esports', 'CN', 1487),
+('WBG', 'Weibo Gaming', 'CN', 1410),
+('JDG', 'JD Gaming', 'CN', 1397),
+('AL', "Anyone's Legend", 'CN', 1392),
+('NIP', 'Ninjas In Pyjamas', 'CN', 1343),
+('iG', 'Invictus Gaming', 'CN', 1310),
+('TT', 'ThunderTalk Gaming', 'CN', 1303),
+('LNG', 'LNG Esports', 'CN', 1284),
+('LGD', 'LGD Gaming', 'CN', 1256),
+('FPX', 'FunPlus Phoenix', 'CN', 1243),
+('OMG', 'Oh My God', 'CN', 1241),
+('WE', 'Team WE', 'CN', 1240),
+('EDG', 'EDward Gaming', 'CN', 1230),
+('RNG', 'Royal Never Give Up', 'CN', 1192),
+('UP', 'Ultra Prime', 'CN', 1180);
+//EMEA
+INSERT INTO teams (slug, name, region, power) VALUES
+('G2', 'G2 Esports', 'EMEA', 1430),
+('KC', 'Karmine Corp', 'EMEA', 1371),
+('FNC', 'Fnatic', 'EMEA', 1361),
+('MKOI', 'Movistar KOI', 'EMEA', 1307),
+('BDS', 'Team BDS', 'EMEA', 1275),
+('SK', 'SK Gaming', 'EMEA', 1213),
+('VIT', 'Team Vitality', 'EMEA', 1211),
+('TH', 'Team Heretics', 'EMEA', 1199),
+('GX', 'GIANTX', 'EMEA', 1192),
+('RGE', 'Rogue', 'EMEA', 1155);
+//AME
+INSERT INTO teams (slug, name, region, power) VALUES
+('FLY', 'FlyQuest', 'AME', 1400),
+('TL', 'Team Liquid', 'AME', 1389),
+('C9', 'Cloud9', 'AME', 1303),
+('100T', '100 Thieves', 'AME', 1268),
+('LYON', 'LYON', 'AME', 1245),
+('DSG', 'Disguised', 'AME', 1218),
+('SR', 'Shopify Rebellion', 'AME', 1192),
+('PAIN', 'paIN Gaming', 'AME', 1187),
+('DIG', 'Dignitas', 'AME', 1174),
+('IE', 'Isurus Estral', 'AME', 1169),
+('LOUD', 'LOUD', 'AME', 1152),
+('RED', 'RED Canids', 'AME', 1148),
+('VKS', 'Vivo Keyd Stars', 'AME', 1148),
+('FUR', 'FURIA', 'AME', 1104),
+('FXW7', 'Fluxo W7M', 'AME', 1083),
+('LEV', 'Leviatan', 'AME', 1058);
+//APAC
+INSERT INTO teams (slug, name, region, power) VALUES
+('TLN', 'TALON', 'APAC', 1384),
+('CFO', 'CTBC Flying Oyster', 'APAC', 1347),
+('GAM', 'GAM Esports', 'APAC', 1326),
+('MVKE', 'MGN Vikings Esports', 'APAC', 1275),
+('SHG', 'Fukuoka SoftBank HAWKS gaming', 'APAC', 1213),
+('TSW', 'Team Secret Whales', 'APAC', 1213),
+('DFM', 'DetnatioN FocusMe', 'APAC', 1165),
+('CHF', 'Chiefs Esports Club', 'APAC', 1157);
