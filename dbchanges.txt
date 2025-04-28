@@ -39,7 +39,7 @@ INSERT INTO teams (slug, name, region, power) VALUES
 ('JDG', 'JD Gaming', 'CN', 1397),
 ('AL', "Anyone's Legend", 'CN', 1392),
 ('NIP', 'Ninjas In Pyjamas', 'CN', 1343),
-('IG', 'Invictus Gaming', 'CN', 1310),
+('iG', 'Invictus Gaming', 'CN', 1310),
 ('TT', 'ThunderTalk Gaming', 'CN', 1303),
 ('LNG', 'LNG Esports', 'CN', 1284),
 ('LGD', 'LGD Gaming', 'CN', 1256),
@@ -86,6 +86,6 @@ INSERT INTO teams (slug, name, region, power) VALUES
 ('GAM', 'GAM Esports', 'APAC', 1326),
 ('MVKE', 'MGN Vikings Esports', 'APAC', 1275),
 ('SHG', 'Fukuoka SoftBank HAWKS gaming', 'APAC', 1213),
-('TW', 'Team Secret Whales', 'APAC', 1213),
+('TSW', 'Team Secret Whales', 'APAC', 1213),
 ('DFM', 'DetnatioN FocusMe', 'APAC', 1165),
 ('CHF', 'Chiefs Esports Club', 'APAC', 1157);
