@@ -348,7 +348,7 @@ class LogoResponse(BaseModel):
     url: str
 @app.get("/team/logo")
 async def logo(team: str):
-    url = get_team_logo_url(team.upper())
+    url = get_team_logo_url(team)
     if url is None:
         raise HTTPException(status_code=404, detail="Team logo not found")
     return LogoResponse(url=url)
