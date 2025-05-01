@@ -28,7 +28,7 @@ def _catch_names(name):
     return alias
 
 def get_competitions():
-    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=15)
     week_plus_one = datetime.now(timezone.utc) + timedelta(days=7)
 
     leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK", "LPL", "LTA", "LCP"]
