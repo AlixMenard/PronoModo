@@ -103,7 +103,7 @@ def update_matches():
             continue
     mydb.commit()
 
-    mycursor.execute("SELECT id, team1, team2, tournament, score1, score2 FROM matches WHERE status = 'Done'")
+    mycursor.execute("SELECT m.id, m.team1, m.team2, t.competition AS tournament, m.score1, m.score2 FROM matches m JOIN tournaments t ON t.name = m.tournament WHERE status = 'Done'")
     matches = mycursor.fetchall()
     mycursor.execute(f"SELECT modo, matchid, team1bet, team2bet FROM bets")
     bets_ = mycursor.fetchall()
