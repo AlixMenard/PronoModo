@@ -36,10 +36,10 @@ def get_competitions():
 
     site = EsportsClient("lol")
     response = site.cargo_client.query(
-        tables = "MatchSchedule=MS, Tournaments=T",
-        join_on="MS.OverviewPage=T.OverviewPage",
-        fields="T.DateStart=Start, T.Date=End, T.Name",
-        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)", #
+        tables="Tournaments=T, Leagues=L",
+        join_on="T.League=L.League",
+        fields="T.DateStart=Start, T.Date=End, T.Name, L.League_Short, T.Split, T.Year",
+        where=f"T.DateStart <= '{week_plus_one}' AND ({league_filter}) AND (T.Date >= '{yesterday}' OR T.Date IS NULL)",
         group_by="T.Name"
     )
 

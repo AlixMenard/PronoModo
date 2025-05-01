@@ -86,15 +86,19 @@ def update_matches():
     mydb.commit()
 
     date = datetime.now(timezone.utc)
-    sql = "SELECT name FROM tournaments WHERE end > %s;"
+    sql = "SELECT name, competition FROM tournaments WHERE end > %s;"
     mycursor.execute(sql, (date-timedelta(days=1),))
-    saved_competitions = [n[0] for n in mycursor.fetchall()]
+    saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
+        compet_name = competition["League Short"] + " " + competition["Split"] + " " + competition["Year"]
         if competition["Name"] not in saved_competitions:
             if competition["End"] is None:
-                competition["End"] = datetime.now(timezone.utc) + timedelta(days=100)
-            sql = "INSERT INTO tournaments (name, start, end) VALUES (%s, %s, %s)"
-            mycursor.execute(sql, (competition["Name"], competition["Start"], competition["End"]))
+                competition["Start"] = datetime.now(timezone.utc) + timedelta(days=100)
+            sql = "INSERT INTO tournaments (name, start, end, competition) VALUES (%s, %s, %s, %s)"
+            mycursor.execute(sql, (competition["Name"], competition["Start"], competition["End"], compet_name))
+        elif saved_competitions[competition["Name"]] is None:
+            sql = "UPDATE tournaments SET competition = %s WHERE name = %s"
+            mycursor.execute(sql, (compet_name, competition["Name"]))
         else:
             continue
     mydb.commit()
@@ -279,7 +283,7 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
 async def competitions():
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = "SELECT id, name, start, end FROM tournaments ORDER BY end DESC"
+    sql = "SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end FROM tournaments GROUP BY competition ORDER BY end DESC"
     mycursor.execute(sql)
     results = mycursor.fetchall()  # Fetch all results as dictionaries
 
@@ -293,15 +297,32 @@ async def matches(competition: int):
     date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.bo, m.date, m.status FROM matches AS m 
-             JOIN tournaments AS t ON m.tournament=t.name 
-             WHERE m.date >= %s AND t.id = %s"""
-    mycursor.execute(sql, (date, competition))
+
+    # Step 1: Get the competition name from the tournament ID
+    mycursor.execute("SELECT competition FROM tournaments WHERE id = %s", (competition,))
+    row = mycursor.fetchone()
+    if not row or not row["competition"]:
+        mycursor.close()
+        mydb.close()
+        return JSONResponse(content=[], status_code=404)
+
+    competition_name = row["competition"]
+
+    # Step 2: Get matches for all tournaments with the same competition name
+    sql = """
+        SELECT m.id, m.team1, m.team2, m.score1, m.score2, m.bo, m.date, m.status 
+        FROM matches AS m 
+        JOIN tournaments AS t ON m.tournament = t.name 
+        WHERE m.date >= %s AND t.competition = %s
+    """
+    mycursor.execute(sql, (date, competition_name))
     results = mycursor.fetchall()
+
     mycursor.close()
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
+
 
 @app.get("/bets")
 async def bets(modo: int, league:str = None, team:str = None):
@@ -430,7 +451,7 @@ async def cancel(id : int):
     mydb.close()
     return {"status": "success", "message": f"Bet {id} cancelled"}
 
-@app.delete("/admin/competition")
+@app.delete("/admin/competition") #! Outdated, need to compare avery tournament with same "competition" field
 async def del_competition(id : int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
