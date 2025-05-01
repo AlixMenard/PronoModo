@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 def get_session() -> PooledMySQLConnection | MySQLConnectionAbstract:
     return mysql.connector.connect(
-        host="db",
+        host="db-test",
         port=3306,
         user="root",
         password="azbecbaboevav",
