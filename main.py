@@ -283,7 +283,7 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
 async def competitions():
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = "SELECT id, competition AS name, start, end FROM tournaments GROUP BY competition ORDER BY end DESC"
+    sql = "SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end FROM tournaments GROUP BY competition ORDER BY end DESC"
     mycursor.execute(sql)
     results = mycursor.fetchall()  # Fetch all results as dictionaries
 
