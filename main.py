@@ -306,7 +306,7 @@ async def modo_competitions(modo: int):
 
     try:
         sql = """
-              SELECT DISTINCT MAX(id) AS id, t.competition AS name, MIN(t.start) AS start, MAX(t.end) AS end
+              SELECT DISTINCT MAX(t.id) AS id, t.competition AS name, MIN(t.start) AS start, MAX(t.end) AS end
               FROM bets b
                        JOIN matches m ON b.matchid = m.id
                        JOIN tournaments t ON m.tournament = t.name
