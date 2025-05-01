@@ -86,7 +86,7 @@ def update_matches():
     mydb.commit()
 
     date = datetime.now(timezone.utc)
-    sql = "SELECT name, competition FROM tournaments WHERE end > %s;"
+    sql = "SELECT name, competition FROM tournaments;"
     mycursor.execute(sql, (date-timedelta(days=1),))
     saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
