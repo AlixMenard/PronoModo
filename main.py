@@ -279,18 +279,52 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
 
 
 #? Data routes
-@app.get("/competitions")
-async def competitions():
+@app.get("/competitions/current")
+async def current_competitions():
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = "SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end FROM tournaments GROUP BY competition ORDER BY end DESC"
-    mycursor.execute(sql)
+    sql = """SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end 
+             FROM tournaments 
+             WHERE end > %s
+             GROUP BY competition 
+             ORDER BY end DESC"""
+    mycursor.execute(sql, (week_ago,))
     results = mycursor.fetchall()  # Fetch all results as dictionaries
 
     mycursor.close()
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
+
+
+@app.get("/competitions/modo")
+async def modo_competitions(modo: int):
+    one_year_ago = datetime.now(timezone.utc) - timedelta(days=365)
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+
+    try:
+        sql = """
+              SELECT DISTINCT t.competition AS name, MIN(t.start) AS start, MAX(t.end) AS end
+              FROM bets b
+                       JOIN matches m ON b.matchid = m.id
+                       JOIN tournaments t ON m.tournament = t.name
+              WHERE b.modo = %s \
+                AND t.end > %s
+              GROUP BY t.competition
+              ORDER BY MAX(t.end) DESC \
+              """
+        mycursor.execute(sql, (modo, one_year_ago))
+        results = mycursor.fetchall()
+        return JSONResponse(content=jsonable_encoder(results))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        mycursor.close()
+        mydb.close()
 
 @app.get("/matches")
 async def matches(competition: int):
