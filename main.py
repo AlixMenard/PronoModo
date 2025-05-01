@@ -142,11 +142,11 @@ def update_matches():
             if (m, t) in scores:
                 sql = """
                             UPDATE scores
-                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s
+                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s, max_score = %s, perfect_score = %s
                             WHERE modo = %s AND tournament = %s
                 """
                 mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2],
-                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2),
+                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2), max_points[t], modos[m][t][3],
                                        m, t))
             else:
                 sql = """
@@ -383,20 +383,78 @@ async def bets(modo: int, league:str = None, team:str = None):
     return JSONResponse(content=jsonable_encoder(results))
 
 @app.get("/ranking")
-async def ranking(competition: int):
+async def ranking(tournament: int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.name, s.num_bets, s.score, s.rating, s.accuracy FROM scores AS s
-             JOIN modos AS m ON m.id=s.modo
-             JOIN tournaments AS t ON s.tournament=t.name 
-             WHERE t.id = %s
-             ORDER BY s.score DESC"""
-    mycursor.execute(sql, (competition,))
-    results = mycursor.fetchall()
-    mycursor.close()
-    mydb.close()
 
-    return JSONResponse(content=jsonable_encoder(results))
+    try:
+        # Step 1: Get the competition name
+        mycursor.execute("SELECT competition FROM tournaments WHERE id = %s", (tournament,))
+        row = mycursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        competition_name = row["competition"]
+
+        # Step 2: Fetch raw scores for all tournaments in the same competition
+        sql = """
+            SELECT m.id AS modo_id, m.name,
+                   s.score, s.num_bets, s.max_score, s.perfect_score
+            FROM scores AS s
+            JOIN modos AS m ON m.id = s.modo
+            JOIN tournaments AS t ON s.tournament = t.name
+            WHERE t.competition = %s
+        """
+        mycursor.execute(sql, (competition_name,))
+        rows = mycursor.fetchall()
+
+        # Step 3: Aggregate per modo
+        modo_stats = {}
+        for row in rows:
+            modo_id = row["modo_id"]
+            if modo_id not in modo_stats:
+                modo_stats[modo_id] = {
+                    "name": row["name"],
+                    "score": 0,
+                    "num_bets": 0,
+                    "max_score": 0,
+                    "perfect_score": 0,
+                }
+            stats = modo_stats[modo_id]
+            stats["score"] += row["score"]
+            stats["num_bets"] += row["num_bets"]
+            stats["max_score"] += row["max_score"]
+            stats["perfect_score"] += row["perfect_score"]
+
+        # Step 4: Compute rating and accuracy
+        results = []
+        for stats in modo_stats.values():
+            score = stats["score"]
+            possible = stats["max_score"]
+            perfect = stats["perfect_score"]
+            rating = score / possible if possible else 0.0
+            accuracy = score / perfect if perfect else 0.0
+            results.append({
+                "name": stats["name"],
+                "num_bets": stats["num_bets"],
+                "score": score,
+                "rating": round(rating, 4),
+                "accuracy": round(accuracy, 4),
+            })
+
+        # Sort by total score descending
+        results.sort(key=lambda x: x["score"], reverse=True)
+
+        return JSONResponse(content=jsonable_encoder(results))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        mycursor.close()
+        mydb.close()
+
+
+
 
 #? Team routes
 class LogoResponse(BaseModel):
