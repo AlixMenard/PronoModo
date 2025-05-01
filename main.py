@@ -87,7 +87,7 @@ def update_matches():
 
     date = datetime.now(timezone.utc)
     sql = "SELECT name, competition FROM tournaments;"
-    mycursor.execute(sql, (date-timedelta(days=1),))
+    mycursor.execute(sql)
     saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
         compet_name = competition["League Short"] + " " + competition["Split"] + " " + competition["Year"]
