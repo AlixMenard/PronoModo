@@ -90,7 +90,7 @@ def update_matches():
     mycursor.execute(sql, (date-timedelta(days=1),))
     saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
-        compet_name = competition["League_short"] + " " + competition["Split"] + " " + competition["Year"]
+        compet_name = competition["League_Short"] + " " + competition["Split"] + " " + competition["Year"]
         if competition["Name"] not in saved_competitions:
             if competition["End"] is None:
                 competition["Start"] = datetime.now(timezone.utc) + timedelta(days=100)
