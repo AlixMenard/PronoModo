@@ -383,13 +383,13 @@ async def bets(modo: int, league:str = None, team:str = None):
     return JSONResponse(content=jsonable_encoder(results))
 
 @app.get("/ranking")
-async def ranking(tournament: int):
+async def ranking(competition: int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
 
     try:
         # Step 1: Get the competition name
-        mycursor.execute("SELECT competition FROM tournaments WHERE id = %s", (tournament,))
+        mycursor.execute("SELECT competition FROM tournaments WHERE id = %s", (competition,))
         row = mycursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Tournament not found")
