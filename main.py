@@ -103,7 +103,7 @@ def update_matches():
             continue
     mydb.commit()
 
-    mycursor.execute("SELECT id, team1, team2, tournament, score1, score2 FROM matches WHERE status = 'Done'")
+    mycursor.execute("SELECT m.id, m.team1, m.team2, t.competition AS tournament, m.score1, m.score2 FROM matches m JOIN tournaments t ON t.name = m.tournament WHERE status = 'Done'")
     matches = mycursor.fetchall()
     mycursor.execute(f"SELECT modo, matchid, team1bet, team2bet FROM bets")
     bets_ = mycursor.fetchall()
@@ -142,11 +142,11 @@ def update_matches():
             if (m, t) in scores:
                 sql = """
                             UPDATE scores
-                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s
+                            SET scores.num_bets = %s, score = %s, perfect = %s, rating = %s, accuracy = %s, max_score = %s, perfect_score = %s
                             WHERE modo = %s AND tournament = %s
                 """
                 mycursor.execute(sql, (modos[m][t][1], modos[m][t][0], modos[m][t][2],
-                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2),
+                                       round(modos[m][t][0]/max_points[t],2), round(modos[m][t][0]/modos[m][t][3],2), max_points[t], modos[m][t][3],
                                        m, t))
             else:
                 sql = """
@@ -279,18 +279,52 @@ async def bet(modo: int, token:str, gameid: int, score1: int, score2: int):
 
 
 #? Data routes
-@app.get("/competitions")
-async def competitions():
+@app.get("/competitions/current")
+async def current_competitions():
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = "SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end FROM tournaments GROUP BY competition ORDER BY end DESC"
-    mycursor.execute(sql)
+    sql = """SELECT MAX(id) AS id, competition AS name, MIN(start) AS start, MAX(end) AS end 
+             FROM tournaments 
+             WHERE end > %s
+             GROUP BY competition 
+             ORDER BY end DESC"""
+    mycursor.execute(sql, (week_ago,))
     results = mycursor.fetchall()  # Fetch all results as dictionaries
 
     mycursor.close()
     mydb.close()
 
     return JSONResponse(content=jsonable_encoder(results))
+
+
+@app.get("/competitions/modo")
+async def modo_competitions(modo: int):
+    one_year_ago = datetime.now(timezone.utc) - timedelta(days=365)
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+
+    try:
+        sql = """
+              SELECT DISTINCT MAX(t.id) AS id, t.competition AS name, MIN(t.start) AS start, MAX(t.end) AS end
+              FROM bets b
+                       JOIN matches m ON b.matchid = m.id
+                       JOIN tournaments t ON m.tournament = t.name
+              WHERE b.modo = %s \
+                AND t.end > %s
+              GROUP BY t.competition
+              ORDER BY MAX(t.end) DESC \
+              """
+        mycursor.execute(sql, (modo, one_year_ago))
+        results = mycursor.fetchall()
+        return JSONResponse(content=jsonable_encoder(results))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        mycursor.close()
+        mydb.close()
 
 @app.get("/matches")
 async def matches(competition: int):
@@ -349,20 +383,78 @@ async def bets(modo: int, league:str = None, team:str = None):
     return JSONResponse(content=jsonable_encoder(results))
 
 @app.get("/ranking")
-async def ranking(competition: int):
+async def ranking(tournament: int):
     mydb = get_session()
     mycursor = mydb.cursor(dictionary=True)
-    sql = """SELECT m.name, s.num_bets, s.score, s.rating, s.accuracy FROM scores AS s
-             JOIN modos AS m ON m.id=s.modo
-             JOIN tournaments AS t ON s.tournament=t.name 
-             WHERE t.id = %s
-             ORDER BY s.score DESC"""
-    mycursor.execute(sql, (competition,))
-    results = mycursor.fetchall()
-    mycursor.close()
-    mydb.close()
 
-    return JSONResponse(content=jsonable_encoder(results))
+    try:
+        # Step 1: Get the competition name
+        mycursor.execute("SELECT competition FROM tournaments WHERE id = %s", (tournament,))
+        row = mycursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        competition_name = row["competition"]
+
+        # Step 2: Fetch raw scores for all tournaments in the same competition
+        sql = """
+            SELECT m.id AS modo_id, m.name,
+                   s.score, s.num_bets, s.max_score, s.perfect_score
+            FROM scores AS s
+            JOIN modos AS m ON m.id = s.modo
+            JOIN tournaments AS t ON s.tournament = t.name
+            WHERE t.competition = %s
+        """
+        mycursor.execute(sql, (competition_name,))
+        rows = mycursor.fetchall()
+
+        # Step 3: Aggregate per modo
+        modo_stats = {}
+        for row in rows:
+            modo_id = row["modo_id"]
+            if modo_id not in modo_stats:
+                modo_stats[modo_id] = {
+                    "name": row["name"],
+                    "score": 0,
+                    "num_bets": 0,
+                    "max_score": 0,
+                    "perfect_score": 0,
+                }
+            stats = modo_stats[modo_id]
+            stats["score"] += row["score"]
+            stats["num_bets"] += row["num_bets"]
+            stats["max_score"] += row["max_score"]
+            stats["perfect_score"] += row["perfect_score"]
+
+        # Step 4: Compute rating and accuracy
+        results = []
+        for stats in modo_stats.values():
+            score = stats["score"]
+            possible = stats["max_score"]
+            perfect = stats["perfect_score"]
+            rating = score / possible if possible else 0.0
+            accuracy = score / perfect if perfect else 0.0
+            results.append({
+                "name": stats["name"],
+                "num_bets": stats["num_bets"],
+                "score": score,
+                "rating": round(rating, 4),
+                "accuracy": round(accuracy, 4),
+            })
+
+        # Sort by total score descending
+        results.sort(key=lambda x: x["score"], reverse=True)
+
+        return JSONResponse(content=jsonable_encoder(results))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        mycursor.close()
+        mydb.close()
+
+
+
 
 #? Team routes
 class LogoResponse(BaseModel):
