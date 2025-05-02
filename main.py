@@ -159,7 +159,7 @@ def update_matches():
 
 
 update_matches()
-scheduler.add_job(update_matches, 'interval', minutes=1)
+scheduler.add_job(update_matches, 'interval', minutes=5)
 scheduler.start()
 
 
