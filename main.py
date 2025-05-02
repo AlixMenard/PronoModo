@@ -72,10 +72,10 @@ def update_matches():
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s, team1 = %s, team2 = %s
                             WHERE leaguepediaId = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, bo, date, id))
+                mycursor.execute(sql, (score1, score2, status, bo, date, team1, team2, id))
             else:
                 # Match does not exist, insert it
                 sql = """
