@@ -44,10 +44,11 @@ def get_competitions():
     )
 
     # As LCK CL matches are not streamed on OTP, we decide do not include them in our dataset.
-    data = [comp for comp in response if "LCK CL" not in comp["Name"]]
+    data = [comp for comp in response if "LCK CL" not in comp["Name"]] #LCK academies
     data = [comp for comp in data if "LCK AS" not in comp["Name"]]
-    data = [comp for comp in data if "Unicef" not in comp["Name"]]
-    data = [comp for comp in data if "LPLOL" not in comp["Name"]]
+    data = [comp for comp in data if "Unicef" not in comp["Name"]] # ?
+    data = [comp for comp in data if "LPLOL" not in comp["Name"]] #Ligue portugaise
+    data = [comp for comp in data if "UEM" not in comp["Name"]] #Ligue amateur espagnole
     return data
 
 def get_schedule(competition: str):
@@ -64,6 +65,10 @@ def get_schedule(competition: str):
     now = datetime.now(timezone.utc)
 
     to_remove = []
+
+    for r in competition_data:
+        print(r)
+    input()
 
     for r in competition_data:
         if r["Date"] is None:
