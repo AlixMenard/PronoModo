@@ -67,10 +67,6 @@ def get_schedule(competition: str):
     to_remove = []
 
     for r in competition_data:
-        print(r)
-    input()
-
-    for r in competition_data:
         if r["Date"] is None:
             to_remove.append(r)
             continue
