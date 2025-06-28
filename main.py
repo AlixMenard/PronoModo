@@ -16,6 +16,8 @@ import hashlib
 from bets import *
 from leaguepedia import *
 
+import traceback
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -447,7 +449,8 @@ async def ranking(competition: int):
         return JSONResponse(content=jsonable_encoder(results))
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"{str(e)}\n\nTraceback:\n{tb}")
 
     finally:
         mycursor.close()
