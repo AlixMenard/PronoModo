@@ -92,7 +92,11 @@ def update_matches():
     mycursor.execute(sql)
     saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
-        compet_name = competition["League Short"] + " " + (competition["Split"] if competition["Split"] is not None else "") + " " + competition["Year"]
+        try:
+            compet_name = competition["League Short"] + " " + (competition["Split"] if competition["Split"] is not None else "") + " " + competition["Year"]
+        except:
+            print(competition)
+            raise Exception("Failed")
         if competition["Name"] not in saved_competitions:
             if competition["End"] is None:
                 competition["Start"] = datetime.now(timezone.utc) + timedelta(days=100)
