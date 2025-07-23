@@ -99,7 +99,7 @@ def update_matches():
             raise Exception("Failed")
         if competition["Name"] not in saved_competitions:
             if competition["End"] is None:
-                competition["Start"] = datetime.now(timezone.utc) + timedelta(days=100)
+                competition["End"] = datetime.now(timezone.utc) + timedelta(days=100)
             sql = "INSERT INTO tournaments (name, start, end, competition) VALUES (%s, %s, %s, %s)"
             mycursor.execute(sql, (competition["Name"], competition["Start"], competition["End"], compet_name))
         elif saved_competitions[competition["Name"]] is None:
