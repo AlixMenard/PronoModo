@@ -207,6 +207,6 @@ def verbose_schedule(row, team):
     else:
         intro = f"Pour la semaine {row["tab"][5:]}"
 
-    text = f"{intro} {team}, {team} jouera le {days[date.weekday()]} {date.strftime('%d')}/{date.strftime('%m')} vers {date.hour}h{date.minute if int(date.minute) > 0 else ''} contre {opponent} (BO{row["bo"]})."
+    text = f"{intro} {team}, {compet} jouera le {days[date.weekday()]} {date.strftime('%d')}/{date.strftime('%m')} vers {date.hour}h{date.minute if int(date.minute) > 0 else ''} contre {opponent} (BO{row["bo"]})."
 
     return text
