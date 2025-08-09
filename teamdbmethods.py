@@ -177,3 +177,24 @@ def get_team_stats(slug:str, tournament:str):
     result["last_5"] = matches[-5:]
     return result
         
+def next_match(slug:str):
+    now = datetime.now()
+
+    mydb = get_session()
+    mycursor = mydb.cursor(dictionary=True)
+
+    sql = """
+            SELECT m.tournament, m.team1, m.team2, m.bo, m.date, m.tab
+            FROM matches as m
+            WHERE (team1 = %s OR team2 = %s)
+              AND date > %s
+            ORDER BY date ASC
+            LIMIT 1;
+            """
+
+    mycursor.execute(sql, (slug, slug, now))
+
+    match = mycursor.fetchone()
+
+
+    return match

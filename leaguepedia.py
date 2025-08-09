@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from mwrogue.esports_client import EsportsClient
 
@@ -59,7 +60,7 @@ def get_schedule(competition: str):
     competition_data = site.cargo_client.query(
         tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
-        fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score, MS.MatchId",
+        fields="MS.DateTime_UTC=Date, MS.Team1Final, MS.Team2Final, Teams1.Short=Short1, Teams2.Short=Short2, MS.BestOf, T.Name, MS.Winner, MS.Team1Score, MS.Team2Score, MS.MatchId, MS.Tab",
         where=f"T.Name = '{competition}'",
         group_by="Teams1.Short, Teams2.Short, MS.DateTime_UTC",
         order_by="MS.DateTime_UTC"
@@ -138,3 +139,74 @@ def _upsert_team_logo(shortcode: str, url: str):
         f.seek(0)
         json.dump(data, f, indent=4)
         f.truncate()
+
+def verbose_schedule(row, team):
+    opponent = row["team1"] if team == row["team2"] else row["team2"]
+
+    tournament = row["tournament"]
+    LEC = ("LEC" in tournament)
+    LFL = ("LFL" in tournament and not "Division 2" in tournament)
+    Div2 = ("LFL" in tournament and "Division 2" in tournament)
+    LCK = ("LCK" in tournament and not "CL" in tournament and not " AS " in tournament)
+    LPL = ("LPL" in tournament and not " 2nd" in tournament)
+    Worlds = (tournament.startswith("Worlds"))
+    MSI = ("MSI" in tournament)
+    EMEAM = (tournament.startswith("EM "))
+    EWC = ("Esports World Cup" in tournament)
+
+    if LEC:
+        compet = "de LEC"
+    if LPL:
+        compet = "de LPL"
+    if LFL:
+        compet = "de LFL"
+    if Div2:
+        compet = "de Div2"
+        if "Promotion" in t:
+            compet = "de promotion en Div2"
+    if LCK:
+        compet = "de LCK"
+        if "Regional Finals" in t:
+            compet = "des Regional Finals de LCK"
+    if Worlds:
+        compet = "des Worlds"
+    if MSI:
+        compet = "du MSI"
+    if EMEAM:
+        compet = "des EMEA Masters"
+    if EWC:
+        compet = "de l'EWC"
+
+    PI = "Play-In" in tournament
+    if "MSI" in tournament:
+        PI = "Play-In" in row["tab"]
+
+    date = row["date"]
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=ZoneInfo("UTC"))
+    date = date.astimezone(ZoneInfo("Europe/Paris"))
+
+    days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+    if PI:
+        intro = f"Pour le Play-In"
+    elif "Day" in row["tab"]:
+        intro = f"Pour le jour {row["tab"][4:]}"
+    elif "Round" in row["tab"]:
+        intro = f"Pour le {row["tab"]} des playoffs"
+        if "Worlds" in compet:
+            intro = f"Pour le Swiss stage"
+    elif "Finals" in row["tab"]:
+        intro = f"Pour la finale des playoffs"
+    elif "Semifinals" in row["tab"]:
+        intro = f"Pour la demi-finale des playoffs"
+    elif "Quarterfinals" in row["tab"]:
+        intro = f"Pour les quarts de finale des playoffs"
+        if EWC:
+            intro = f"Pour les quarts de finale"
+    else:
+        intro = f"Pour la semaine {row["tab"][5:]}"
+
+    text = f"{intro} {team}, {team} jouera le {days[date.weekday()]} {date.strftime('%d')}/{date.strftime('%m')} vers {date.hour}h{date.minute if int(date.minute) > 0 else ''} contre {opponent} (BO{row["bo"]})."
+
+    return text

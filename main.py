@@ -66,6 +66,7 @@ def update_matches():
             date = match["Date"]
             status = match["Status"]
             id = match["MatchId"]
+            tab = match["Tab"]
             if id in saved_matches:
                 if saved_matches[id] == status and status == "Done":
                     continue
@@ -74,17 +75,17 @@ def update_matches():
                 # Match exists, update it
                 sql = """
                             UPDATE matches 
-                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s, team1 = %s, team2 = %s
+                            SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s, team1 = %s, team2 = %s, tab = %s
                             WHERE leaguepediaId = %s
                         """
-                mycursor.execute(sql, (score1, score2, status, bo, date, team1, team2, id))
+                mycursor.execute(sql, (score1, score2, status, bo, date, team1, team2, tab, id))
             else:
                 # Match does not exist, insert it
                 sql = """
-                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status, leaguepediaId) 
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO matches (tournament, team1, team2, score1, score2, bo, date, status, leaguepediaId, tab) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 """
-                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status, id))
+                mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status, id, tab))
     mydb.commit()
 
     date = datetime.now(timezone.utc)
@@ -579,3 +580,14 @@ async def del_match(id:int):
     mydb.commit()
     mydb.close()
     return {"status": "success", "message": f"Match {id} deleted"}
+
+#? Schedule route
+@app.get("/schedule/{team}")
+async def schedule(team:str):
+    team = team.upper() if team.upper() != "IG" else "iG"
+
+    match = next_match(team)
+
+    text = verbose_schedule(match, team)
+
+    return text
