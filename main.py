@@ -588,15 +588,26 @@ async def del_match(id:int):
     return {"status": "success", "message": f"Match {id} deleted"}
 
 #? Schedule route
+schedule_cache = {}
 @app.get("/schedule/{team}")
 async def schedule(team:str):
     team = team.upper() if team.upper() != "IG" else "iG"
 
+    now = datetime.now().replace(tzinfo=ZoneInfo("UTC"))
+    if team not in schedule_cache and schedule_cache.get(team) > now:
+        return schedule_cache[team]
+
     match = next_match(team)
+
+    date = row["date"]
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=ZoneInfo("UTC"))
 
     if match is None:
         return "Aucun match trouvé, as-tu bien écrit le tag de l'équipe ?"
 
     text = verbose_schedule(match, team)
+
+    schedule_cache[team] = (date, text)
 
     return text
