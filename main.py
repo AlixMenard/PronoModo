@@ -139,7 +139,12 @@ def update_matches():
                 if not r[0] in modos[b[0]]:
                     modos[b[0]][r[0]] = (b[1] + r[1], 1, b[1] + r[1] == b[1].bo, b[1].bo) #score, num_bets, perfect | pts_max (somme .bo)
                 else:
-                    s = b[1] + r[1]
+                    try:
+                        s = b[1] + r[1]
+                    except:
+                        print(b)
+                        print(r)
+                        exit()
                     modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1] + 1,
                                          modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2], modos[b[0]][r[0]][3] + b[1].bo)
     mycursor.execute(f"SELECT modo, tournament FROM scores")
