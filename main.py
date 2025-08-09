@@ -599,7 +599,7 @@ async def schedule(team:str):
 
     match = next_match(team)
 
-    date = row["date"]
+    date = match["date"]
     if date.tzinfo is None:
         date = date.replace(tzinfo=ZoneInfo("UTC"))
 
