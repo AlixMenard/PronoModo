@@ -1,14 +1,14 @@
 services:
-  backend-test:
+  backend:
     build:
       context: .
     networks:
       - reverse-proxy
-      - pronomodotest-network
+      - pronomodo-network
     depends_on:
-      - db-test
+      - db
 
-  db-test:
+  db:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=azbecbaboevav
@@ -16,18 +16,11 @@ services:
       - MYSQL_USER=modo
       - MYSQL_PASSWORD=
     ports:
-      - "3307:3306"
+      - "3306:3306"
     networks:
-      - pronomodotest-network
+      - pronomodo-network
     volumes:
-      - db_data_test:/var/lib/mysql
-
-networks:
-  reverse-proxy:
-    external: true
-
-  pronomodotest-network:
-    driver: bridge
+      - db_data:/var/lib/mysql
 
 networks:
   reverse-proxy:
@@ -37,4 +30,4 @@ networks:
     driver: bridge
 
 volumes:
-  db_data_test:
+  db_data:
