@@ -162,12 +162,10 @@ def verbose_schedule(row, team):
         compet = "de LFL"
     if Div2:
         compet = "de Div2"
-        if "Promotion" in t:
+        if "Promotion" in tournament:
             compet = "de promotion en Div2"
     if LCK:
         compet = "de LCK"
-        if "Regional Finals" in t:
-            compet = "des Regional Finals de LCK"
     if Worlds:
         compet = "des Worlds"
     if MSI:
