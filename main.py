@@ -594,7 +594,7 @@ async def schedule(team:str):
     team = team.upper() if team.upper() != "IG" else "iG"
 
     now = datetime.now().replace(tzinfo=ZoneInfo("UTC"))
-    if team not in schedule_cache and schedule_cache.get(team) > now:
+    if team in schedule_cache and schedule_cache.get(team) > now:
         return schedule_cache[team]
 
     match = next_match(team)
