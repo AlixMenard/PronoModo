@@ -594,6 +594,9 @@ async def schedule(team:str):
 
     match = next_match(team)
 
+    if match is None:
+        return "Aucun match trouvé, as-tu bien écrit le tag de l'équipe ?"
+
     text = verbose_schedule(match, team)
 
     return text
