@@ -53,6 +53,7 @@ def get_competitions():
     data = [comp for comp in data if "UEM" not in comp["Name"]] #Ligue amateur espagnole
     data = [comp for comp in data if "Road to LEC Finals" not in comp["Name"]]
     data = [comp for comp in data if "LEC Fan Clash" not in comp["Name"]]
+    data = [comp for comp in data if "OPQ" not in comp["Name"]]
     return data
 
 def get_schedule(competition: str):
