@@ -600,7 +600,7 @@ async def schedule(team:str):
     match = next_match(team)
 
     if match is None:
-        return "Aucun match trouvé, as-tu bien écrit le tag de l'équipe ?"
+        return "Aucun match trouvé pour le moment, as-tu bien écrit le tag de l'équipe ?"
 
     date = match["date"] if type(match) is not list else match[0]["date"]
     if date.tzinfo is None:
