@@ -208,3 +208,40 @@ def verbose_schedule(row, team):
     text = f"{intro} {compet}, {team}  jouera le {days[date.weekday()]} {date.strftime('%d')}/{date.strftime('%m')} vers {date.hour}h{date.minute if int(date.minute) > 0 else ''} contre {opponent} (BO{row["bo"]})."
 
     return text
+
+def verbose_schedule_lfl(rows, team):
+    opponents = [row["team1"] if team == row["team2"] else row["team2"] for row in rows]
+
+    tournament = rows[0]["tournament"]
+
+    compet = "de LFL"
+
+    PI = "Play-In" in tournament
+
+    for row in rows:
+        date = row["date"]
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=ZoneInfo("UTC"))
+        row["date"] = date.astimezone(ZoneInfo("Europe/Paris"))
+
+    days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+    row = rows[0]
+    if PI:
+        intro = f"Pour le Play-In"
+    elif "Day" in row["tab"]:
+        intro = f"Pour le jour {row["tab"][4:]}"
+    elif "Round" in row["tab"]:
+        intro = f"Pour le {row["tab"]} des playoffs"
+    elif "Finals" in row["tab"]:
+        intro = f"Pour la finale des playoffs"
+    elif "Semifinals" in row["tab"]:
+        intro = f"Pour la demi-finale des playoffs"
+    elif "Quarterfinals" in row["tab"]:
+        intro = f"Pour les quarts de finale des playoffs"
+    else:
+        intro = f"Pour la semaine {row["tab"][5:]}"
+
+    text = f"{intro} {compet}, {team}  jouera " + "et ".join([f"le {days[rows[i]["date"].weekday()]} {rows[i]["date"].strftime('%d')}/{rows[i]["date"].strftime('%m')} vers {rows[i]["date"].strftime('%Hh%M').replace('h00', 'h')} contre {opponents[i]} (BO{rows[i]["bo"]})" for i in range(len(rows))])
+
+    return text

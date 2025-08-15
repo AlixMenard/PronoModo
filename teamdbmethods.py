@@ -1,4 +1,5 @@
 import mysql.connector
+from dateutil.relativedelta import relativedelta
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 from datetime import datetime, timedelta, timezone
@@ -196,5 +197,25 @@ def next_match(slug:str):
 
     match = mycursor.fetchone()
 
+    if not "LFL" in match["tournament"]:
+        return match
 
-    return match
+    matches = [match]
+
+    start_date = match["date"]
+    start_date = start_date - timedelta(days=start_date.weekday())
+
+    end_date = start_date + timedelta(days=6)
+
+    sql_more = """
+               SELECT m.tournament, m.team1, m.team2, m.bo, m.date, m.tab
+               FROM matches AS m
+               WHERE (team1 = %s OR team2 = %s)
+                 AND date > %s
+                 AND date <= %s
+               ORDER BY date ASC;
+               """
+    mycursor.execute(sql_more, (slug, slug, start_date, end_date))
+    matches = mycursor.fetchall()
+
+    return matches
