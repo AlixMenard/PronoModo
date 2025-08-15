@@ -604,7 +604,7 @@ async def schedule(team:str):
 
     date = match["date"] if type(match) is not list else match[0]["date"]
     if date.tzinfo is None:
-        date = date.replace(tzinfo=ZoneInfo("UTC")
+        date = date.replace(tzinfo=ZoneInfo("UTC"))
 
     if type(match) is not list:
         text = verbose_schedule(match, team)
