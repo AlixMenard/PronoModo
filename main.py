@@ -599,12 +599,12 @@ async def schedule(team:str):
 
     match = next_match(team)
 
-    date = match["date"] if type(match) is not list else match[0]["date"]
-    if date.tzinfo is None:
-        date = date.replace(tzinfo=ZoneInfo("UTC"))
-
     if match is None:
         return "Aucun match trouvé, as-tu bien écrit le tag de l'équipe ?"
+
+    date = match["date"] if type(match) is not list else match[0]["date"]
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=ZoneInfo("UTC")
 
     if type(match) is not list:
         text = verbose_schedule(match, team)
