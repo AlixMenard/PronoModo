@@ -197,13 +197,8 @@ def next_match(slug:str):
 
     match = mycursor.fetchone()
 
-    if match is None:
-        return None
-
-    if not "LFL" in match["tournament"]:
+    if match is not None and not "LFL" in match["tournament"]:
         return match
-
-    matches = [match]
 
     start_date = match["date"]
     start_date = start_date - timedelta(days=start_date.weekday())
@@ -220,5 +215,8 @@ def next_match(slug:str):
                """
     mycursor.execute(sql_more, (slug, slug, start_date, end_date))
     matches = mycursor.fetchall()
+
+    if not "LFL" in matches[0]["tournament"]:
+        return None
 
     return matches
