@@ -200,7 +200,7 @@ def next_match(slug:str):
     if match is not None and not "LFL" in match["tournament"]:
         return match
 
-    start_date = match["date"]
+    start_date = match["date"] if match is not None else datetime.now() - timedelta(days=datetime.now().weekday())
     start_date = start_date - timedelta(days=start_date.weekday())
 
     end_date = start_date + timedelta(days=6)
