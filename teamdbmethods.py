@@ -197,6 +197,9 @@ def next_match(slug:str):
 
     match = mycursor.fetchone()
 
+    if match is None:
+        return None
+
     if not "LFL" in match["tournament"]:
         return match
 
