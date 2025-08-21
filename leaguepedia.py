@@ -54,7 +54,8 @@ def get_competitions():
         "UEM",          # Spanish amateur league
         "Road to LEC Finals",
         "LEC Fan Clash",
-        "OPQ"           # Open Qualificer LCP
+        "OPQ",          # Open Qualificer LCP
+        "Wildcard"
     ]
 
     # Filter in a single pass
