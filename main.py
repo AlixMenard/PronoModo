@@ -86,6 +86,7 @@ def update_matches():
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 """
                 mycursor.execute(sql, (tournament, team1, team2, score1, score2, bo, date, status, id, tab))
+                saved_matches[id] = status
     mydb.commit()
 
     date = datetime.now(timezone.utc)
