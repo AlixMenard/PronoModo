@@ -58,7 +58,8 @@ def get_competitions():
         "Road to LEC Finals",
         "LEC Fan Clash",
         "OPQ",          # Open Qualificer LCP
-        "Wildcard"
+        "Wildcard",
+        "Promotion"
     ]
 
     # Filter in a single pass
