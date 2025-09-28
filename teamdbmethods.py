@@ -92,6 +92,8 @@ def get_league_power(region:str):
     return power if power is not None else 800
 
 def register_team(name:str, slug:str, competition:str):
+    if slug in ["ZNE", "ZENA"]:
+        return
     comp_dic = {"LEC":"EMEA", "LPL":"CN", "LCK":"KR", "LFL":"ERL", "":"TBD"}
     for key in comp_dic:
         if key in competition:
