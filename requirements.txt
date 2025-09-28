@@ -2,5 +2,4 @@ fastapi[standard]~=0.115.11
 APScheduler~=3.11.0
 mysql-connector-python~=9.2.0
 requests~=2.32.3
-pytest~=8.3.5
 mwrogue~=0.1.5
