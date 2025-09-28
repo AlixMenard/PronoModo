@@ -102,6 +102,11 @@ def get_schedule(competition: str):
             r["Short2"] = _catch_names(r["Team2Final"])
         _update_team_logo_url_from_api(r["Team2Final"], r["Short2"])
 
+        if r["Short1"] == "ZNE":
+            r["Short1"] = "ZENA"
+        if r["Short2"] == "ZNE":
+            r["Short2"] = "ZENA"
+
     for r in to_remove:
         competition_data.remove(r)
 
