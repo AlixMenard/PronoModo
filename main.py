@@ -95,7 +95,7 @@ def update_matches():
     saved_competitions = {n[0]: n[1] for n in mycursor.fetchall()}
     for competition in competitions:
         try:
-            compet_name = competition["League Short"] + " " + (competition["Split"] if competition["Split"] is not None else "") + " " + competition["Year"]
+            compet_name = competition["League Short"] + " " + (competition["Split"] if competition["Split"] is not None else "") + " " + competition["Year"] if competition["Year"] is not None else f"{datetime.today().year}"
         except:
             print(competition)
             raise Exception("Failed")
