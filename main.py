@@ -15,6 +15,7 @@ import hashlib
 
 from bets import *
 from leaguepedia import *
+from leaguepedia import _catch_names, _KNOWN_NAMES
 
 import traceback
 
