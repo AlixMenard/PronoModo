@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from mwrogue.esports_client import EsportsClient
 from mwrogue.auth_credentials import AuthCredentials
-credentials = AuthCredentials(user_file="me")
+credentials = AuthCredentials(user_file="mybot")
 
 _KNOWN_NAMES = {
     "Nigma Galaxy Male": "NGX",
