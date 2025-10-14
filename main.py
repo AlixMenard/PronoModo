@@ -63,7 +63,7 @@ def update_matches():
             score2 = match["Team2Score"]
             score2 = int(score2) if (score2 is not None and score2 != '') else 0
             bo = match["BestOf"]
-            date = match["Date"] if (match["Date"] is not None and match["Date"] != '') else None
+            date = match["Date"] if (match["Date"] is not None and match["Date"] != '') else datetime.now(timezone.utc)
             status = match["Status"]
             id = match["MatchId"]
             tab = match["Tab"]
