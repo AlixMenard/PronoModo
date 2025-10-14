@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from mwrogue.esports_client import EsportsClient
+from mwrogue.auth_credentials import AuthCredentials
+credentials = AuthCredentials(user_file="me")
 
 _KNOWN_NAMES = {
     "Nigma Galaxy Male": "NGX",
@@ -39,7 +41,7 @@ def get_competitions():
     leagues = ["First Stand", "MSI", "Worlds", "EM ", "EMEA Masters", "LEC", "LFL", "LCK", "LPL", "LTA", "LCP"]
     league_filter = "(" + " OR T.name LIKE ".join([f"'%{l}%'" for l in leagues]) + ")"
 
-    site = EsportsClient("lol")
+    site = EsportsClient("lol", credentials=credentials)
     response = site.cargo_client.query(
         tables="Tournaments=T, Leagues=L",
         join_on="T.League=L.League",
@@ -71,7 +73,7 @@ def get_competitions():
     return data
 
 def get_schedule(competition: str):
-    site = EsportsClient("lol")
+    site = EsportsClient("lol", credentials=credentials)
     competition_data = site.cargo_client.query(
         tables="MatchSchedule=MS, Tournaments=T, Teamnames=Teams1, Teamnames=Teams2",
         join_on="MS.OverviewPage=T.OverviewPage, MS.Team1Final=Teams1.LongName, MS.Team2Final=Teams2.LongName",
@@ -128,7 +130,7 @@ def _update_team_logo_url_from_api(team: str, shortcode: str, refresh=False):
     if not refresh and get_team_logo_url(shortcode) is not None:
         return
 
-    site = EsportsClient("lol")
+    site = EsportsClient("lol", credentials=credentials)
     response = site.client.api(
         action="query",
         format="json",
