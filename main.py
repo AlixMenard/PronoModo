@@ -50,6 +50,16 @@ def update_matches():
         schedule = get_schedule(competition["Name"])
         for match in schedule:
             tournament = match['Name']
+            if match["Team1Final"] == "Veni Vidi Vici (Spanish Team)" or match["Team2Final"] == "Veni Vidi Vici (Spanish Team)":
+                print("\n"*10)
+                print(match)
+                print(match["Short1"], match["Short2"])
+                s1 = _catch_names(match["Team1Final"])
+                s2 = _catch_names(match["Team2Final"])
+                print(s1, s2)
+                print(s1 in team_slugs, s2 in team_slugs)
+                print(team_slugs)
+                exit
             team1 = match["Short1"] if match["Short1"] is not None else _catch_names(match["Team1Final"])
             if team1 not in team_slugs:
                 register_team(match["Team1Final"], team1, tournament)
