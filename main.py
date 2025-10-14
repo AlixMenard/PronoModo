@@ -55,13 +55,13 @@ def update_matches():
                 register_team(match["Team1Final"], team1, tournament)
                 team_slugs.append(team1)
             score1 = match["Team1Score"]
-            score1 = int(score1) if (score1 is not None or score1 != '') else 0
+            score1 = int(score1) if (score1 is not None and score1 != '') else 0
             team2 = match["Short2"] if match["Short2"] is not None else "TBD"
             if team2 not in team_slugs:
                 register_team(match["Team2Final"], team2, tournament)
                 team_slugs.append(team2)
             score2 = match["Team2Score"]
-            score2 = int(score2) if (score2 is not None or score2 != '') else 0
+            score2 = int(score2) if (score2 is not None and score2 != '') else 0
             bo = match["BestOf"]
             date = match["Date"]
             status = match["Status"]
