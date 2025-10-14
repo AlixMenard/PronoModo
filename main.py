@@ -50,13 +50,13 @@ def update_matches():
         schedule = get_schedule(competition["Name"])
         for match in schedule:
             tournament = match['Name']
-            team1 = match["Short1"] if match["Short1"] is not None else "TBD"
+            team1 = match["Short1"] if match["Short1"] is not None else _catch_names(match["Team1Final"])
             if team1 not in team_slugs:
                 register_team(match["Team1Final"], team1, tournament)
                 team_slugs.append(team1)
             score1 = match["Team1Score"]
             score1 = int(score1) if (score1 is not None and score1 != '') else 0
-            team2 = match["Short2"] if match["Short2"] is not None else "TBD"
+            team2 = match["Short2"] if match["Short2"] is not None else _catch_names(match["Team2Final"])
             if team2 not in team_slugs:
                 register_team(match["Team2Final"], team2, tournament)
                 team_slugs.append(team2)

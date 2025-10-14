@@ -31,7 +31,7 @@ def _catch_names(name):
     alias = _KNOWN_NAMES.get(name)
     if alias is None:
         logging.warning(f"Unknown team name: -{name}-")
-        return "une équipe"
+        return "TBD"
     return alias
 
 def get_competitions():
