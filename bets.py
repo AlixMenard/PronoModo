@@ -26,7 +26,7 @@ class Bet:
         return self.score1 - self.score2
 
     def __add__(self, result):
-        assert(self.bo == result.bo)
+        assert(self.bo == result.bo, f"{self.bo} != {result.bo}")
         match self.bo:
             case 1:
                 return int(self.score1 == result.score1)
