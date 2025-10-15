@@ -67,6 +67,8 @@ def update_matches():
             bo = match["BestOf"]
             date = match["Date"] if (match["Date"] is not None and match["Date"] != '') else datetime.now(timezone.utc)
             status = match["Status"]
+            if score1 == 0 and score2 == 0:
+                status = "Waiting"
             id = match["MatchId"]
             tab = match["Tab"]
             if id in saved_matches:
