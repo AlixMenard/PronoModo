@@ -151,6 +151,11 @@ def update_matches():
                     modos[b[0]][r[0]] = (modos[b[0]][r[0]][0] + s, modos[b[0]][r[0]][1] + 1,
                                          modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2], modos[b[0]][r[0]][3] + b[1].bo)
     mycursor.execute(f"SELECT modo, tournament FROM scores")
+
+    m = modos[8]
+    with open("maelle.json") as json_file:
+        json.dump(m, json_file, indent=4)
+
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
         for t in modos[m]:
