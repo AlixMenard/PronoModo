@@ -68,6 +68,7 @@ def update_matches():
             status = match["Status"]
             id = match["MatchId"]
             tab = match["Tab"]
+            print("I'm here")
             if id in saved_matches:
                 if saved_matches[id] == status and status == "Done":
                     continue
@@ -79,6 +80,7 @@ def update_matches():
                             SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s, team1 = %s, team2 = %s, tab = %s
                             WHERE leaguepediaId = %s
                         """
+                print("And here ?")
                 mycursor.execute(sql, (score1, score2, status, bo, date, team1, team2, tab, id))
             else:
                 # Match does not exist, insert it
@@ -116,26 +118,26 @@ def update_matches():
     matches = mycursor.fetchall()
     mycursor.execute(f"SELECT modo, matchid, team1bet, team2bet FROM bets")
     bets_ = mycursor.fetchall()
-    bets = dict()
+    bets = dict() ## {matchId : List[modo, Bet]}
     for bet in bets_:
         if bet[1] not in bets:
             bets[bet[1]] = [(bet[0], Bet("", "", bet[2], bet[3]))]
         else:
             bets[bet[1]].append((bet[0], Bet("", "", bet[2], bet[3])))
-    results = dict()
-    max_points = defaultdict(int)
+    results = dict() ## {matchId : (tournament, Result)}
+    max_points = defaultdict(int) ## {tournament : max_score}
     for match in matches:
         if match[0] not in results:
             results[match[0]] = (match[3], Result(match[1], match[2], match[4], match[5]))
             max_points[match[3]] += results[match[0]][1].bo
 
-    modos = dict()
+    modos = dict() ## {modo : {tournament : x } }
     for r_ in results:
         for b_ in bets:
             if r_ != b_:
                 continue
             r = results[r_]
-            for b in bets[b_]:
+            for b in bets[b_]: # r_ = matchId; b_ = matchId; r = (tournament, Result); b = (modo, Bet)
                 if not b[0] in modos:
                     modos[b[0]] = dict()
                 if not r[0] in modos[b[0]]:
