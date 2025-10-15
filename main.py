@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -153,8 +154,9 @@ def update_matches():
     mycursor.execute(f"SELECT modo, tournament FROM scores")
 
     m = modos[8]
-    with open("maelle.json", "w") as json_file:
-        json.dump(m, json_file, indent=4)
+    txt = json.dumps(m, indent=2)
+    print(txt)
+    print("\n"*20)
 
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
