@@ -153,10 +153,10 @@ def update_matches():
                                          modos[b[0]][r[0]][2] + 1 if s == b[1].bo else modos[b[0]][r[0]][2], modos[b[0]][r[0]][3] + b[1].bo)
     mycursor.execute(f"SELECT modo, tournament FROM scores")
 
-    m = modos[8]
-    txt = json.dumps(m, indent=2)
-    print(txt)
-    print("\n"*20)
+    # m = modos[8]
+    # txt = json.dumps(m, indent=2)
+    # print(txt)
+    # print("\n"*20)
 
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
     for m in modos:
@@ -419,7 +419,7 @@ async def ranking(competition: int):
 
         # Step 2: Fetch raw scores for all tournaments in the same competition
         sql = """
-            SELECT m.id AS modo_id, m.name,
+            SELECT m.id AS modo_id, m.name, t.name AS tname,
                    s.score, s.num_bets, s.max_score, s.perfect_score
             FROM scores AS s
             JOIN modos AS m ON m.id = s.modo
@@ -428,6 +428,9 @@ async def ranking(competition: int):
         """
         mycursor.execute(sql, (competition_name,))
         rows = mycursor.fetchall()
+
+        for i in rows:
+            print(i["tname"])
 
         # Step 3: Aggregate per modo
         modo_stats = {}
