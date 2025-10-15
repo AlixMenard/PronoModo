@@ -153,7 +153,7 @@ def update_matches():
     mycursor.execute(f"SELECT modo, tournament FROM scores")
 
     m = modos[8]
-    with open("maelle.json") as json_file:
+    with open("maelle.json", "w") as json_file:
         json.dump(m, json_file, indent=4)
 
     scores = {(modo, tournament) for modo, tournament in mycursor.fetchall()}
