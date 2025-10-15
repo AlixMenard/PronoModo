@@ -68,7 +68,6 @@ def update_matches():
             status = match["Status"]
             id = match["MatchId"]
             tab = match["Tab"]
-            print("I'm here")
             if id in saved_matches:
                 if saved_matches[id] == status and status == "Done":
                     continue
@@ -80,7 +79,6 @@ def update_matches():
                             SET score1 = %s, score2 = %s, status = %s, bo = %s, date = %s, team1 = %s, team2 = %s, tab = %s
                             WHERE leaguepediaId = %s
                         """
-                print("And here ?")
                 mycursor.execute(sql, (score1, score2, status, bo, date, team1, team2, tab, id))
             else:
                 # Match does not exist, insert it
