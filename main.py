@@ -68,12 +68,12 @@ def update_matches():
             date = match["Date"] if (match["Date"] is not None and match["Date"] != '') else datetime.now(timezone.utc)
             status = match["Status"]
             id = match["MatchId"]
-            if score1 == 0 and score2 == 0:
+            if score1 == 0 and score2 == 0 and status == "Done":
                 status = "Waiting"
                 print(id)
             tab = match["Tab"]
             if id in saved_matches:
-                if saved_matches[id] == status and status == "Done":
+                if saved_matches[id] == status and status == "Done" and date>datetime.now(timezone.utc)+timedelta(hours=23):
                     continue
                 if status == "Done": #If match just finished
                     update_power(team1, team2, score1, score2, bo)
@@ -431,9 +431,6 @@ async def ranking(competition: int):
         """
         mycursor.execute(sql, (competition_name,))
         rows = mycursor.fetchall()
-
-        for i in rows:
-            print(i["tname"])
 
         # Step 3: Aggregate per modo
         modo_stats = {}
