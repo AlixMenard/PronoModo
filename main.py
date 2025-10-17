@@ -75,7 +75,7 @@ def update_matches():
             if id in saved_matches:
                 print(date)
                 print("\n"*20)
-                if saved_matches[id] == status and status == "Done" and date>datetime.now(timezone.utc)+timedelta(hours=23):
+                if saved_matches[id] == status and status == "Done" and datetime.strptime(date, '%Y-%m-%d %H:%M:%S')>datetime.now(timezone.utc)+timedelta(hours=23):
                     continue
                 if status == "Done": #If match just finished
                     update_power(team1, team2, score1, score2, bo)
