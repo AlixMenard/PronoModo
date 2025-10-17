@@ -73,6 +73,8 @@ def update_matches():
                 print(id)
             tab = match["Tab"]
             if id in saved_matches:
+                print(date)
+                print("\n"*20)
                 if saved_matches[id] == status and status == "Done" and date>datetime.now(timezone.utc)+timedelta(hours=23):
                     continue
                 if status == "Done": #If match just finished
