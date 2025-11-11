@@ -1,5 +1,6 @@
 services:
   backend:
+    restart: always
     build:
       context: .
     networks:
@@ -9,6 +10,7 @@ services:
       - db
 
   db:
+    restart: always
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=azbecbaboevav
